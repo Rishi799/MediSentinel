@@ -1,0 +1,11 @@
+# Phase 1
+psycopg[binary]>=3.2      # PostgreSQL driver
+pymongo>=4.8              # MongoDB driver
+python-dotenv>=1.0        # reads .env
+streamlit>=1.39           # forms / web app
+pandas>=2.2
+requests>=2.32            # openFDA API
+Faker>=30.0               # synthetic test data
+
+# development
+pytest>=8.3
