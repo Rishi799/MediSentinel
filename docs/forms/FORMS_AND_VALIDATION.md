@@ -52,6 +52,10 @@ Enables clinical personnel to enroll new patients with complete medical baseline
 ### Screenshots
 ![Patients Page](02_patients.png)
 
+#### Form Validation Error Example
+When invalid input (e.g., empty or non-compliant full name) is submitted, client validation intercepts saving and renders user-friendly error notifications:
+![Patient Validation Errors](05_validation_errors.png)
+
 ### Authorized Roles
 - **Doctor (`ms_doctor`) / Admin (`ms_admin`)**: Full registration privileges (form visible and interactive).
 - **Pharmacist (`ms_pharmacist`)**: Read-only view. The registration form is hidden, displaying:
