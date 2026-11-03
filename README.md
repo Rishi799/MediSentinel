@@ -30,18 +30,9 @@ MediSentinel/
 │   ├── queries.sql          joins, subquery, aggregation, window function
 │   └── 00_run_all.sql       one-shot schema + seed for psql
 ├── tests/                   automated tests (python -m pytest)
-├── tools/
-│   ├── check_setup.py       checks .env, PostgreSQL logins and MongoDB on your machine
-│   └── run_demo.py          zero-install check of the SQL logic (Python sqlite3)
-└── docs/
-    ├── tasks/               PERSON_A.md, PERSON_B.md, PERSON_C.md: your task sheet
-    ├── NORMALIZATION.md     UNF → 1NF → 2NF → 3NF → BCNF for all 11 tables
-    ├── WORK_PLAN.md         who does what, phase by phase
-    ├── PHASE1_SPRINT.md     Phase 1 as a 2-day sprint (hour by hour)
-    ├── ER_Diagram_MediSentinel        ER diagram           (.png and .pdf)
-    ├── Schema_Diagram_MediSentinel    relational mapping   (.png and .pdf)
-    ├── DFD_MediSentinel               DFD levels 0, 1, 2   (.png and .pdf)
-    └── manual/              A4 print files for the lab manual (18 mm margins)
+└── tools/
+    ├── check_setup.py       checks .env, PostgreSQL logins and MongoDB on your machine
+    └── run_demo.py          zero-install check of the SQL logic (Python sqlite3)
 ```
 
 ## Setup (each member, once)
@@ -125,12 +116,12 @@ Phase 2: spaCy/scispaCy (NLP), scikit-learn (ML)
 |---|---|---|
 | Design | ER diagram, relational mapping, DFD, synopsis, SRS | Done |
 | 1 | Database layer, login roles, MongoDB + openFDA data, forms with validation → Partial Demo | Done (tag `v1-partial-demo`) |
-| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | Planned ([PHASE2_PLAN_AND_SPECIFICATIONS.md](docs/PHASE2_PLAN_AND_SPECIFICATIONS.md)) |
+| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | Planned |
 
 ## Team
 
-| USN | Name | Role | Task sheet |
-|---|---|---|---|
-| | Rishi Agarwal | Person A – repo lead, database & integration | [PERSON_A.md](docs/tasks/PERSON_A.md) |
-| | Sambhav | Person B – data & NoSQL | [PERSON_B.md](docs/tasks/PERSON_B.md) |
-| | Priyanshi Gupta | Person C – application & AI | [PERSON_C.md](docs/tasks/PERSON_C.md) |
+| USN | Name | Role |
+|---|---|---|
+| | Rishi Agarwal | Person A – repo lead, database & integration |
+| | Sambhav | Person B – data & NoSQL |
+| | Priyanshi Gupta | Person C – application & AI |

@@ -1,7 +1,6 @@
 # How we work in this repo
 
 Repo lead: **Person A** (reviews and merges every pull request).
-Your tasks: [Person B](docs/tasks/PERSON_B.md) · [Person C](docs/tasks/PERSON_C.md) · [Person A](docs/tasks/PERSON_A.md)
 
 ## First time
 
