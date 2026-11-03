@@ -73,6 +73,28 @@ Needs **PostgreSQL 18**, **MongoDB 8** and **Python 3.13**.
    python -m pytest
    ```
    All lines should say OK and all tests should pass.
+5. **Load the openFDA data and demo patients** (once):
+   ```bash
+   python ingestion/load_openfda.py
+   python ingestion/load_medications.py
+   python ingestion/generate_synthetic.py
+   ```
+
+## Run the app
+
+```bash
+streamlit run app/Home.py
+```
+
+Sign in with `ms_doctor`, `ms_pharmacist` or `ms_admin` and the matching password from your `.env`.
+
+| Page | What it shows |
+|---|---|
+| Dashboard | headline numbers, active alerts by type and severity, latest alerts and prescriptions |
+| Patients | searchable records, a profile with conditions, allergies, active medicines and alerts; registration form |
+| Prescriptions | new prescription beside the patient's safety context, the trigger's verdict as alert cards; history |
+| Safety alerts | filters by patient, severity and type; doctor override with a reason; override audit trail |
+| Drug safety data | openFDA labels and adverse-event reports from MongoDB, label lookup, PRR/ROR signals |
 
 ## Login roles
 
@@ -102,13 +124,13 @@ Phase 2: spaCy/scispaCy (NLP), scikit-learn (ML)
 | Phase | Scope | Status |
 |---|---|---|
 | Design | ER diagram, relational mapping, DFD, synopsis, SRS | Done |
-| 1 | Database layer, login roles, MongoDB + openFDA data, forms with validation → Partial Demo | **In progress** (database layer and roles done) |
-| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | Planned |
+| 1 | Database layer, login roles, MongoDB + openFDA data, forms with validation → Partial Demo | Done (tag `v1-partial-demo`) |
+| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | Planned ([PHASE2_PLAN_AND_SPECIFICATIONS.md](docs/PHASE2_PLAN_AND_SPECIFICATIONS.md)) |
 
 ## Team
 
 | USN | Name | Role | Task sheet |
 |---|---|---|---|
 | | Rishi Agarwal | Person A – repo lead, database & integration | [PERSON_A.md](docs/tasks/PERSON_A.md) |
-| | | Person B – data & NoSQL | [PERSON_B.md](docs/tasks/PERSON_B.md) |
-| | | Person C – application & AI | [PERSON_C.md](docs/tasks/PERSON_C.md) |
+| | Sambhav | Person B – data & NoSQL | [PERSON_B.md](docs/tasks/PERSON_B.md) |
+| | Priyanshi Gupta | Person C – application & AI | [PERSON_C.md](docs/tasks/PERSON_C.md) |

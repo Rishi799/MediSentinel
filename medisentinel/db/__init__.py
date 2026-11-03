@@ -138,3 +138,90 @@ def override_alert(conn, alert_id, reason):
             "UPDATE Alert_Log SET overridden = TRUE, override_reason = %s "
             "WHERE alert_id = %s AND NOT overridden", (reason.strip(), alert_id)).rowcount
     return updated == 1
+
+
+# ---------- read-only summaries for the app's dashboard and detail panels ----------
+
+def dashboard_counts(conn):
+    """Headline numbers: patients, doctors, medications, prescriptions and alert totals."""
+    return conn.execute(
+        "SELECT (SELECT count(*) FROM Patient)      AS patients, "
+        "       (SELECT count(*) FROM Doctor)       AS doctors, "
+        "       (SELECT count(*) FROM Medication)   AS medications, "
+        "       (SELECT count(*) FROM Prescription) AS prescriptions, "
+        "       count(*) FILTER (WHERE NOT overridden)                      AS active_alerts, "
+        "       count(*) FILTER (WHERE NOT overridden AND severity = 'MAJOR') AS major_alerts, "
+        "       count(*) FILTER (WHERE overridden)                          AS overridden_alerts "
+        "FROM Alert_Log").fetchone()
+
+
+def alert_breakdown(conn):
+    """Active alerts counted by type and severity (for the dashboard chart)."""
+    return conn.execute(
+        "SELECT alert_type, severity, count(*) AS n FROM v_active_alerts "
+        "GROUP BY alert_type, severity ORDER BY alert_type, severity").fetchall()
+
+
+def recent_prescriptions(conn, limit=10, patient_id=None):
+    """Newest prescriptions with their medicines and how many alerts each raised."""
+    return conn.execute(
+        "SELECT p.prescription_id, p.prescribed_date, p.status, pt.full_name AS patient, "
+        "       d.full_name AS doctor, "
+        "       string_agg(m.name || ' ' || coalesce(pi.dose, ''), ', ' ORDER BY m.name) AS medicines, "
+        "       (SELECT count(*) FROM Alert_Log a JOIN Prescription_Item x ON x.item_id = a.item_id "
+        "         WHERE x.prescription_id = p.prescription_id) AS alerts "
+        "FROM Prescription p "
+        "JOIN Patient pt ON pt.patient_id = p.patient_id "
+        "JOIN Doctor d ON d.doctor_id = p.doctor_id "
+        "JOIN Prescription_Item pi ON pi.prescription_id = p.prescription_id "
+        "JOIN Medication m ON m.med_id = pi.med_id "
+        "WHERE %(patient)s::int IS NULL OR p.patient_id = %(patient)s "
+        "GROUP BY p.prescription_id, pt.full_name, d.full_name "
+        "ORDER BY p.prescription_id DESC LIMIT %(limit)s",
+        {"patient": patient_id, "limit": limit}).fetchall()
+
+
+def patient_profile(conn, patient_id):
+    """One patient with the facts the safety trigger checks: conditions, allergies, active medicines.
+
+    Returns None if there is no such patient.
+    """
+    patient = conn.execute(
+        "SELECT patient_id, full_name, date_of_birth, gender, renal_function, hepatic_function "
+        "FROM Patient WHERE patient_id = %s", (patient_id,)).fetchone()
+    if patient is None:
+        return None
+    patient["conditions"] = [r["condition_name"] for r in conn.execute(
+        "SELECT condition_name FROM Patient_Condition WHERE patient_id = %s ORDER BY 1",
+        (patient_id,)).fetchall()]
+    patient["allergies"] = conn.execute(
+        "SELECT coalesce(m.name, a.substance) AS substance, a.reaction FROM Allergy a "
+        "LEFT JOIN Medication m ON m.med_id = a.med_id WHERE a.patient_id = %s ORDER BY 1",
+        (patient_id,)).fetchall()
+    patient["active_medicines"] = conn.execute(
+        "SELECT DISTINCT m.name, pi.dose, pi.frequency FROM Prescription_Item pi "
+        "JOIN Prescription p ON p.prescription_id = pi.prescription_id "
+        "JOIN Medication m ON m.med_id = pi.med_id "
+        "WHERE p.patient_id = %s AND p.status = 'ACTIVE' ORDER BY m.name", (patient_id,)).fetchall()
+    return patient
+
+
+def get_overridden_alerts(conn, limit=50):
+    """Audit trail: alerts a doctor overrode, with the reason given."""
+    return conn.execute(
+        "SELECT a.alert_id, pt.full_name AS patient, m.name AS medication, a.alert_type, "
+        "       a.severity, a.message, a.override_reason, a.created_at "
+        "FROM Alert_Log a "
+        "JOIN Prescription_Item pi ON pi.item_id = a.item_id "
+        "JOIN Prescription p ON p.prescription_id = pi.prescription_id "
+        "JOIN Patient pt ON pt.patient_id = p.patient_id "
+        "JOIN Medication m ON m.med_id = pi.med_id "
+        "WHERE a.overridden ORDER BY a.alert_id DESC LIMIT %s", (limit,)).fetchall()
+
+
+def list_signals(conn, limit=20):
+    """Strongest adverse-reaction signals (PRR) per medication from Adverse_Signal."""
+    return conn.execute(
+        "SELECT m.name AS medication, s.reaction_term, s.report_count, s.prr, s.ror "
+        "FROM Adverse_Signal s JOIN Medication m ON m.med_id = s.med_id "
+        "ORDER BY s.prr DESC NULLS LAST LIMIT %s", (limit,)).fetchall()

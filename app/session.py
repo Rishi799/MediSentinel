@@ -1,5 +1,7 @@
 """Session state and role-based access management for MediSentinel Streamlit app."""
 
+from html import escape
+
 import psycopg
 import streamlit as st
 
@@ -115,8 +117,7 @@ def require_login():
     Returns the active database connection when logged in.
     """
     if not is_logged_in():
-        st.warning("⚠️ Access restricted: You must be logged in to view this page.")
-        st.info("Please navigate to the **Home** page and log in with your credentials.")
+        st.warning("You must be signed in to view this page.", icon=":material/lock:")
         st.stop()
     return st.session_state[SESSION_CONN]
 
@@ -134,19 +135,21 @@ def require_role(*roles: str):
 
 def render_sidebar_status() -> None:
     """Render consistent session info and a logout button in the Streamlit sidebar."""
+    if not is_logged_in():
+        return
+    role = get_role()
+    user = get_username()
+    role_icon = {"doctor": "🩺", "pharmacist": "💊", "admin": "⚙️"}.get(role or "", "👤")
+    access = "Read-only access" if role == "pharmacist" else "Read & write access"
     with st.sidebar:
-        st.markdown("### 🏥 MediSentinel")
-        st.caption("Intelligent Medication Safety")
-        st.divider()
-
-        if is_logged_in():
-            role = get_role()
-            user = get_username()
-            role_emoji = {"doctor": "🩺", "pharmacist": "💊", "admin": "⚙️"}.get(role or "", "👤")
-            st.success(f"**Logged in as {role}**")
-            st.markdown(f"**User**: `{user}`  \n**Access Level**: {role_emoji} {role.capitalize() if role else ''}")
-
-            if st.button("🚪 Log out", key="sidebar_logout_button", use_container_width=True):
-                logout()
-        else:
-            st.info("🔒 Not logged in. Please sign in on the **Home** page.")
+        st.markdown(
+            f'<div style="background:#13304D;border:1px solid #1E3A5F;border-radius:12px;'
+            f'padding:0.75rem 0.9rem;margin:0.4rem 0 0.6rem 0">'
+            f'<div style="font-size:0.72rem;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">'
+            f'Signed in</div>'
+            f'<div style="font-weight:700;color:#F8FAFC;margin-top:0.15rem">{role_icon} '
+            f'{escape((role or "user").capitalize())}</div>'
+            f'<div style="font-size:0.82rem;color:#CBD5E1">{escape(user or "")} · {access}</div></div>',
+            unsafe_allow_html=True)
+        if st.button("Log out", key="sidebar_logout_button", icon=":material/logout:", width="stretch"):
+            logout()

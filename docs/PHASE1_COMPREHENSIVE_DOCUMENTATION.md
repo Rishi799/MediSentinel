@@ -161,29 +161,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 5. Team Roles & Detailed Work Accomplished
 
 ### Person A: Database Architecture, Security & Integration (Rishi - Lead)
-* **11 BCNF Relational Schemas**: Authored [schema.sql](file:///c:/Users/rishi/Desktop/dbms%20el/sql/schema.sql) with full primary key, foreign key, index, check, and unique constraints.
-* **BCNF Normalization Proof**: Authored [NORMALIZATION.md](file:///c:/Users/rishi/Desktop/dbms%20el/docs/NORMALIZATION.md) detailing formal functional dependency proofs for all 11 tables.
+* **11 BCNF Relational Schemas**: Authored [schema.sql](../sql/schema.sql) with full primary key, foreign key, index, check, and unique constraints.
+* **BCNF Normalization Proof**: Authored [NORMALIZATION.md](./NORMALIZATION.md) detailing formal functional dependency proofs for all 11 tables.
 * **Real-Time Safety Trigger Engine**: Designed and validated `trg_medication_safety` and stored function `compute_combo_risk()`.
-* **PostgreSQL Security Setup**: Authored [roles.sql](file:///c:/Users/rishi/Desktop/dbms%20el/sql/roles.sql) establishing least-privilege roles (`ms_doctor`, `ms_pharmacist`, `ms_admin`).
+* **PostgreSQL Security Setup**: Authored [roles.sql](../sql/roles.sql) establishing least-privilege roles (`ms_doctor`, `ms_pharmacist`, `ms_admin`).
 * **Concurrency Locking**: Integrated `pg_advisory_xact_lock(patient_id)` in `medisentinel/db` to serialize multi-item prescription entries and prevent race conditions.
 * **Shared DB Library**: Created `medisentinel/config.py`, `constants.py`, and `medisentinel/db/__init__.py`.
-* **Zero-Install Verification Harness**: Authored [tools/run_demo.py](file:///c:/Users/rishi/Desktop/dbms%20el/tools/run_demo.py), an in-memory SQLite equivalent verifying all trigger rules and queries without PostgreSQL dependencies.
+* **Zero-Install Verification Harness**: Authored [tools/run_demo.py](../tools/run_demo.py), an in-memory SQLite equivalent verifying all trigger rules and queries without PostgreSQL dependencies.
 * **Repository Lead**: Managed code reviews, branch synchronization, pull request approvals (#1 through #7), and release tagging.
 
 ### Person B: Data Engineering & NoSQL Ingestion (Member 2)
-* **openFDA API Ingestion Pipeline**: Authored [load_openfda.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/load_openfda.py) harvesting 1,000+ FDA drug labels and 5,000+ adverse event reports into MongoDB collections `medication_labels` and `adverse_reports`.
-* **NoSQL $\rightarrow$ SQL Medication Loader**: Developed [load_medications.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/load_medications.py) with pure parser `label_to_medication()` migrating brand names, generic names, RxCUI identifiers, and pharmacologic classes into PostgreSQL.
-* **Synthetic Healthcare Generator**: Implemented [generate_synthetic.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/generate_synthetic.py) using `Faker("en_IN")` generating 10 doctors, 100 realistic patients with medical histories, and 300 prescriptions that exercise the live trigger.
-* **Pharmacovigilance Analytics**: Developed [mongo_queries.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/mongo_queries.py) executing multi-stage aggregation pipelines (`$unwind` $\rightarrow$ `$group` $\rightarrow$ `$sort`) for signal mining (PRR / ROR).
-* **Ingestion Unit Tests**: Built [test_ingestion.py](file:///c:/Users/rishi/Desktop/dbms%20el/tests/test_ingestion.py) verifying label parsing, edge cases, and missing field handling (5/5 tests passing).
+* **openFDA API Ingestion Pipeline**: Authored [load_openfda.py](../ingestion/load_openfda.py) harvesting 1,000+ FDA drug labels and 5,000+ adverse event reports into MongoDB collections `medication_labels` and `adverse_reports`.
+* **NoSQL $\rightarrow$ SQL Medication Loader**: Developed [load_medications.py](../ingestion/load_medications.py) with pure parser `label_to_medication()` migrating brand names, generic names, RxCUI identifiers, and pharmacologic classes into PostgreSQL.
+* **Synthetic Healthcare Generator**: Implemented [generate_synthetic.py](../ingestion/generate_synthetic.py) using `Faker("en_IN")` generating 10 doctors, 100 realistic patients with medical histories, and 300 prescriptions that exercise the live trigger.
+* **Pharmacovigilance Analytics**: Developed [mongo_queries.py](../ingestion/mongo_queries.py) executing multi-stage aggregation pipelines (`$unwind` $\rightarrow$ `$group` $\rightarrow$ `$sort`) for signal mining (PRR / ROR).
+* **Ingestion Unit Tests**: Built [test_ingestion.py](../tests/test_ingestion.py) verifying label parsing, edge cases, and missing field handling (5/5 tests passing).
 
 ### Person C: Frontend Application, Forms & Validation (Priyanshi Gupta)
-* **Authentication & Session Portal**: Built [app/Home.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/Home.py) and [app/session.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/session.py) authenticating users directly against PostgreSQL database roles with session guards (`require_login()`, `require_role()`).
-* **Validation Suite**: Implemented [app/validation.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/validation.py) enforcing healthcare business rules (name format, non-future DOB, dose unit compliance, duplicate drug prevention) with 20 unit tests in [test_validation.py](file:///c:/Users/rishi/Desktop/dbms%20el/tests/test_validation.py) (20/20 passing).
-* **Patient Registration Page**: Developed [1_Patients.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/pages/1_Patients.py) capturing demographics, renal/hepatic clearance levels, conditions, and allergies in one atomic transaction, while rendering a read-only view for pharmacists.
-* **Prescription Entry & Live Alert Board**: Developed [2_Prescriptions.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/pages/2_Prescriptions.py) rendering dynamic 1–6 medication rows and displaying color-coded trigger alerts (Red `MAJOR`, Yellow `MODERATE`, Blue `MINOR`).
-* **Active Alerts & Override Management**: Built [3_Alerts.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/pages/3_Alerts.py) allowing doctors to review active alerts and log clinical overrides with mandatory justifications.
-* **Lab Form Specification Document**: Authored [FORMS_AND_VALIDATION.md](file:///c:/Users/rishi/Desktop/dbms%20el/docs/forms/FORMS_AND_VALIDATION.md) complete with UI screenshots ([01_login.png](file:///c:/Users/rishi/Desktop/dbms%20el/docs/forms/01_login.png) through [05_validation_errors.png](file:///c:/Users/rishi/Desktop/dbms%20el/docs/forms/05_validation_errors.png)).
+* **Authentication & Session Portal**: Built [app/Home.py](../app/Home.py) and [app/session.py](../app/session.py) authenticating users directly against PostgreSQL database roles with session guards (`require_login()`, `require_role()`).
+* **Validation Suite**: Implemented [app/validation.py](../app/validation.py) enforcing healthcare business rules (name format, non-future DOB, dose unit compliance, duplicate drug prevention) with 20 unit tests in [test_validation.py](../tests/test_validation.py) (20/20 passing).
+* **Patient Registration Page**: Developed [1_Patients.py](../app/pages/1_Patients.py) capturing demographics, renal/hepatic clearance levels, conditions, and allergies in one atomic transaction, while rendering a read-only view for pharmacists.
+* **Prescription Entry & Live Alert Board**: Developed [2_Prescriptions.py](../app/pages/2_Prescriptions.py) rendering dynamic 1–6 medication rows and displaying color-coded trigger alerts (Red `MAJOR`, Yellow `MODERATE`, Blue `MINOR`).
+* **Active Alerts & Override Management**: Built [3_Alerts.py](../app/pages/3_Alerts.py) allowing doctors to review active alerts and log clinical overrides with mandatory justifications.
+* **Lab Form Specification Document**: Authored [FORMS_AND_VALIDATION.md](./forms/FORMS_AND_VALIDATION.md) complete with UI screenshots ([01_login.png](./forms/01_login.png) through [05_validation_errors.png](./forms/05_validation_errors.png)).
 
 ---
 
@@ -214,19 +214,19 @@ Executed via `tools/run_demo.py` and live in the Streamlit application:
 
 | Deliverable | Location | Status |
 |---|---|---|
-| **SQL Relational Schema** | [sql/schema.sql](file:///c:/Users/rishi/Desktop/dbms%20el/sql/schema.sql) | ✅ Complete |
-| **Security Roles DDL** | [sql/roles.sql](file:///c:/Users/rishi/Desktop/dbms%20el/sql/roles.sql) | ✅ Complete |
-| **BCNF Normalization Proofs** | [docs/NORMALIZATION.md](file:///c:/Users/rishi/Desktop/dbms%20el/docs/NORMALIZATION.md) | ✅ Complete |
-| **Entity-Relationship Diagram** | [docs/ER_Diagram_MediSentinel.png](file:///c:/Users/rishi/Desktop/dbms%20el/docs/ER_Diagram_MediSentinel.png) | ✅ Complete |
-| **Data Flow Diagram (Levels 0-2)** | [docs/DFD_MediSentinel.png](file:///c:/Users/rishi/Desktop/dbms%20el/docs/DFD_MediSentinel.png) | ✅ Complete |
-| **Relational Schema Mapping** | [docs/Schema_Diagram_MediSentinel.png](file:///c:/Users/rishi/Desktop/dbms%20el/docs/Schema_Diagram_MediSentinel.png) | ✅ Complete |
-| **openFDA Mongo Ingestion ETL** | [ingestion/load_openfda.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/load_openfda.py) | ✅ Complete |
-| **NoSQL $\rightarrow$ SQL Medication Loader** | [ingestion/load_medications.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/load_medications.py) | ✅ Complete |
-| **Synthetic Test Data Generator** | [ingestion/generate_synthetic.py](file:///c:/Users/rishi/Desktop/dbms%20el/ingestion/generate_synthetic.py) | ✅ Complete |
-| **Streamlit Clinical Application** | [app/Home.py](file:///c:/Users/rishi/Desktop/dbms%20el/app/Home.py) & [app/pages/](file:///c:/Users/rishi/Desktop/dbms%20el/app/pages/) | ✅ Complete & Live |
-| **Form Specifications & UI Captures** | [docs/forms/FORMS_AND_VALIDATION.md](file:///c:/Users/rishi/Desktop/dbms%20el/docs/forms/FORMS_AND_VALIDATION.md) | ✅ Complete |
-| **Zero-Install Verification Harness** | [tools/run_demo.py](file:///c:/Users/rishi/Desktop/dbms%20el/tools/run_demo.py) | ✅ Complete |
-| **21-Slide Executive Presentation** | [docs/MediSentinel_Phase1_Executive_Presentation.pptx](file:///c:/Users/rishi/Desktop/dbms%20el/docs/MediSentinel_Phase1_Executive_Presentation.pptx) | ✅ Complete |
+| **SQL Relational Schema** | [sql/schema.sql](../sql/schema.sql) | ✅ Complete |
+| **Security Roles DDL** | [sql/roles.sql](../sql/roles.sql) | ✅ Complete |
+| **BCNF Normalization Proofs** | [docs/NORMALIZATION.md](./NORMALIZATION.md) | ✅ Complete |
+| **Entity-Relationship Diagram** | [docs/ER_Diagram_MediSentinel.png](./ER_Diagram_MediSentinel.png) | ✅ Complete |
+| **Data Flow Diagram (Levels 0-2)** | [docs/DFD_MediSentinel.png](./DFD_MediSentinel.png) | ✅ Complete |
+| **Relational Schema Mapping** | [docs/Schema_Diagram_MediSentinel.png](./Schema_Diagram_MediSentinel.png) | ✅ Complete |
+| **openFDA Mongo Ingestion ETL** | [ingestion/load_openfda.py](../ingestion/load_openfda.py) | ✅ Complete |
+| **NoSQL $\rightarrow$ SQL Medication Loader** | [ingestion/load_medications.py](../ingestion/load_medications.py) | ✅ Complete |
+| **Synthetic Test Data Generator** | [ingestion/generate_synthetic.py](../ingestion/generate_synthetic.py) | ✅ Complete |
+| **Streamlit Clinical Application** | [app/Home.py](../app/Home.py) & [app/pages/](../app/pages/) | ✅ Complete & Live |
+| **Form Specifications & UI Captures** | [docs/forms/FORMS_AND_VALIDATION.md](./forms/FORMS_AND_VALIDATION.md) | ✅ Complete |
+| **Zero-Install Verification Harness** | [tools/run_demo.py](../tools/run_demo.py) | ✅ Complete |
+| **21-Slide Executive Presentation** | [docs/MediSentinel_Phase1_Executive_Presentation.pptx](./MediSentinel_Phase1_Executive_Presentation.pptx) | ✅ Complete |
 | **GitHub Pull Requests & Merges** | PRs #1, #2, #3, #4, #5, #6, #7 | ✅ Merged into `main` |
 | **Release Tag** | `v1-partial-demo` | ✅ Tagged & Pushed |
 

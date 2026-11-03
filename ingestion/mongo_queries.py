@@ -1,12 +1,20 @@
 """MongoDB aggregation demo queries for adverse-event surveillance."""
 
+import re
+
 from pymongo import MongoClient
 from medisentinel import config
 
 
+_client = None
+
+
 def get_db():
-    client = MongoClient(config.MONGO_URI)
-    return client[config.MONGO_DB]
+    """The openFDA database; one MongoClient (it pools connections) is reused for every query."""
+    global _client
+    if _client is None:
+        _client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=3000)
+    return _client[config.MONGO_DB]
 
 
 def top_reactions(n: int = 10) -> list[dict]:
@@ -41,6 +49,39 @@ def top_reported_drugs(n: int = 10) -> list[dict]:
         {"$match": {"_id": {"$ne": None}}},
         {"$sort": {"report_count": -1}},
         {"$limit": n}
+    ]
+    return list(db["adverse_reports"].aggregate(pipeline))
+
+
+def collection_counts() -> dict:
+    """Number of documents in each openFDA collection."""
+    db = get_db()
+    return {"labels": db["medication_labels"].estimated_document_count(),
+            "reports": db["adverse_reports"].estimated_document_count()}
+
+
+def find_labels(search: str, limit: int = 10) -> list[dict]:
+    """Drug labels whose generic or brand name starts with `search` (case-insensitive)."""
+    db = get_db()
+    pattern = {"$regex": "^" + re.escape(search.strip()), "$options": "i"}
+    projection = {"openfda.brand_name": 1, "openfda.generic_name": 1, "openfda.manufacturer_name": 1,
+                  "openfda.pharm_class_epc": 1, "drug_interactions": 1, "contraindications": 1,
+                  "boxed_warning": 1}
+    query = {"$or": [{"openfda.generic_name": pattern}, {"openfda.brand_name": pattern}]}
+    return list(db["medication_labels"].find(query, projection).limit(limit))
+
+
+def reactions_for_drug(drug: str, n: int = 10) -> list[dict]:
+    """Top N reactions in reports that mention `drug` (matched on the start of the product name)."""
+    db = get_db()
+    name = {"$regex": "^" + re.escape(drug.strip()), "$options": "i"}
+    pipeline = [
+        {"$match": {"patient.drug.medicinalproduct": name}},
+        {"$unwind": "$patient.reaction"},
+        {"$group": {"_id": "$patient.reaction.reactionmeddrapt", "report_count": {"$sum": 1}}},
+        {"$match": {"_id": {"$ne": None}}},
+        {"$sort": {"report_count": -1}},
+        {"$limit": n},
     ]
     return list(db["adverse_reports"].aggregate(pipeline))
 

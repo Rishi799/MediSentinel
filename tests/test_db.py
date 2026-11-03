@@ -121,3 +121,30 @@ def test_doctor_cannot_forge_or_delete_alerts(doctor):
                        "VALUES (%s, 'INTERACTION', 'MINOR', 'forged')", (item_id,))
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         doctor.execute("DELETE FROM Alert_Log")
+
+
+def test_dashboard_summaries(pharmacist):
+    counts = db.dashboard_counts(pharmacist)
+    assert counts["patients"] >= 3 and counts["medications"] >= 10
+    assert counts["active_alerts"] == sum(r["n"] for r in db.alert_breakdown(pharmacist))
+    recent = db.recent_prescriptions(pharmacist, limit=3)
+    assert 0 < len(recent) <= 3 and all(r["medicines"] for r in recent)
+    assert db.list_signals(pharmacist, limit=1)[0]["medication"] == "Simvastatin"  # highest PRR in the seed
+
+
+def test_patient_profile_shows_what_the_trigger_checks(doctor, med, new_patient):
+    db.create_prescription(doctor, new_patient, first_doctor(doctor),
+                           [{"med_id": med("Warfarin"), "dose": "5 mg", "frequency": "once daily"}])
+    profile = db.patient_profile(doctor, new_patient)
+    assert profile["conditions"] == ["peptic ulcer"]
+    assert [m["name"] for m in profile["active_medicines"]] == ["Warfarin"]
+    assert len(db.recent_prescriptions(doctor, patient_id=new_patient)) == 1
+    assert db.patient_profile(doctor, 999999) is None
+
+
+def test_override_appears_in_audit_trail(doctor, med, new_patient):
+    _, alerts = db.create_prescription(doctor, new_patient, first_doctor(doctor),
+                                       [{"med_id": med("Aspirin"), "dose": "75 mg", "frequency": "once daily"}])
+    db.override_alert(doctor, alerts[0]["alert_id"], "Short course, monitored")
+    trail = {a["alert_id"]: a["override_reason"] for a in db.get_overridden_alerts(doctor)}
+    assert trail[alerts[0]["alert_id"]] == "Short course, monitored"

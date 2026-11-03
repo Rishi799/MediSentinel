@@ -1,123 +1,115 @@
-"""Active safety alerts and clinical overrides page (Task C5)."""
+"""Safety alerts: filter active alerts, override with a reason, and view the audit trail (Task C5)."""
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-import psycopg
-from psycopg import errors as pg_errors
+import pandas as pd
 import streamlit as st
+from psycopg import errors as pg_errors
 
-from app import session
+from app import session, ui
 from medisentinel import db
 
-st.set_page_config(page_title="Alerts | MediSentinel", page_icon="🚨", layout="wide")
-session.render_sidebar_status()
-
-# 1. Require login first
 conn = session.require_login()
+is_doctor = session.get_role() == "doctor"
 
-st.title("🚨 Medication Safety Alerts & Clinical Overrides")
-st.caption("Active safety alerts automatically raised by the database safety trigger (drug-drug interactions, contraindications, and patient allergies).")
+ui.page_header("🚨", "Safety alerts", "Raised only by the database trigger. Doctors may override one with a "
+                                     "clinical reason, which is kept as an audit trail.")
 
-# 2. Patient filter
-try:
+flash = st.session_state.pop("alerts_flash", None)
+if flash:
+    st.success(flash, icon=":material/check_circle:")
+
+tab_active, tab_audit = st.tabs(["Active alerts", "Override audit trail"])
+
+with tab_active:
     patients = db.list_patients(conn)
-except Exception as e:
-    patients = []
-    st.error(f"Could not load patients: {e}")
+    patient_options = {"All patients": None}
+    patient_options.update({f"{p['full_name']} · #{p['patient_id']}": p["patient_id"] for p in patients})
 
-filter_options = {"All Patients": None}
-for p in patients:
-    filter_options[f"{p['full_name']} (ID: #{p['patient_id']})"] = p["patient_id"]
+    f1, f2, f3 = st.columns([2, 1.3, 1.5])
+    patient_label = f1.selectbox("Patient", options=list(patient_options.keys()))
+    severities = f2.multiselect("Severity", options=list(ui.SEVERITY_STYLE.keys()),
+                                format_func=lambda s: ui.SEVERITY_STYLE[s]["label"], placeholder="All")
+    types = f3.multiselect("Type", options=list(ui.ALERT_TYPE_LABEL.keys()),
+                           format_func=ui.ALERT_TYPE_LABEL.get, placeholder="All")
 
-selected_filter_label = st.selectbox(
-    "Filter alerts by patient:",
-    options=list(filter_options.keys()),
-    index=0,
-    help="Select a specific patient to filter active alerts, or select 'All Patients'.",
-)
-selected_patient_id = filter_options[selected_filter_label]
+    alerts = db.get_active_alerts(conn, patient_id=patient_options[patient_label])
+    if severities:
+        alerts = [a for a in alerts if a["severity"] in severities]
+    if types:
+        alerts = [a for a in alerts if a["alert_type"] in types]
 
-# 3. Fetch active alerts
-try:
-    alerts = db.get_active_alerts(conn, patient_id=selected_patient_id)
-except Exception as e:
-    alerts = []
-    st.error(f"Error fetching active alerts: {e}")
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        ui.kpi("Showing", len(alerts), "active alerts")
+    for col, sev in zip((k2, k3, k4), ("MAJOR", "MODERATE", "MINOR")):
+        with col:
+            ui.kpi(ui.SEVERITY_STYLE[sev]["label"], sum(1 for a in alerts if a["severity"] == sev),
+                   tone="critical" if sev == "MAJOR" else "")
 
-st.markdown("### 📋 Active Safety Alerts")
-
-if not alerts:
-    st.success("No active safety alerts found.")
-else:
-    # Format alerts for dataframe display
-    table_rows = []
-    for a in alerts:
-        table_rows.append({
-            "Alert ID": a["alert_id"],
-            "Patient": a["patient"],
-            "Medication": a["medication"],
-            "Type": a["alert_type"],
-            "Severity": a["severity"],
-            "Message": a["message"],
-            "Created At": a["created_at"].strftime("%Y-%m-%d %H:%M:%S") if hasattr(a["created_at"], "strftime") else str(a["created_at"]),
-        })
-
-    st.dataframe(table_rows, use_container_width=True)
-    st.caption(f"Showing {len(alerts)} active alert(s)")
-
-# 4. Role-based override section: Doctors only
-st.divider()
-user_role = session.get_role()
-
-if user_role == "doctor":
-    st.markdown("### 🩺 Clinical Alert Override")
-    st.caption("Physicians may override active safety alerts if the clinical benefit outweighs the detected risk. An audit trail reason is required by the database.")
-
+    st.write("")
     if not alerts:
-        st.info("No active alerts available to override.")
+        st.success("No active alerts match these filters.", icon=":material/verified:")
     else:
-        # Build dictionary for alert selection: "Alert #<id> - [<SEVERITY>] <Patient> - <Medication>: <Message>"
-        alert_choice_map = {}
-        for a in alerts:
-            label = f"Alert #{a['alert_id']} · [{a['severity']} {a['alert_type']}] {a['patient']} — {a['medication']}: {a['message']}"
-            alert_choice_map[label] = a["alert_id"]
+        df = pd.DataFrame(alerts)
+        df["severity"] = df["severity"].map(
+            lambda s: f"{ui.SEVERITY_STYLE[s]['icon']} {ui.SEVERITY_STYLE[s]['label']}" if s in ui.SEVERITY_STYLE
+            else s)
+        df["alert_type"] = df["alert_type"].map(ui.ALERT_TYPE_LABEL).fillna(df["alert_type"])
+        st.dataframe(
+            df[["alert_id", "severity", "alert_type", "patient", "medication", "message", "created_at"]],
+            hide_index=True, width="stretch", height=min(420, 38 + 35 * len(df)),
+            column_config={
+                "alert_id": st.column_config.NumberColumn("Alert #", format="%d", width="small"),
+                "severity": st.column_config.TextColumn("Severity", width="small"),
+                "alert_type": "Type", "patient": "Patient", "medication": "Medicine",
+                "message": st.column_config.TextColumn("Details", width="large"),
+                "created_at": st.column_config.DatetimeColumn("Raised", format="DD MMM YYYY, HH:mm"),
+            })
 
-        with st.form("alert_override_form", clear_on_submit=True):
-            chosen_alert_label = st.selectbox(
-                "Select Alert to Override *",
-                options=list(alert_choice_map.keys()),
-            )
-            chosen_alert_id = alert_choice_map[chosen_alert_label]
+        if is_doctor:
+            with st.container(border=True):
+                st.markdown("##### Override an alert")
+                st.caption("Only when the clinical benefit outweighs the risk. The reason is stored with the alert.")
+                choices = {f"#{a['alert_id']} · {a['severity']} · {a['patient']} · {a['medication']}": a
+                           for a in alerts}
+                with st.form("alert_override_form", border=False, clear_on_submit=True):
+                    chosen = st.selectbox("Alert *", options=list(choices.keys()))
+                    reason = st.text_area("Clinical reason *", max_chars=500,
+                                          placeholder="e.g. Short course under close INR monitoring; "
+                                                      "benefit outweighs risk.")
+                    submitted = st.form_submit_button("Override alert", type="primary", icon=":material/gavel:")
+                if submitted:
+                    alert = choices[chosen]
+                    if not reason or not reason.strip():
+                        st.error("A reason is required: an alert cannot be overridden without a clinical "
+                                 "justification.", icon=":material/error:")
+                    else:
+                        try:
+                            if db.override_alert(conn, alert["alert_id"], reason):
+                                st.session_state["alerts_flash"] = (
+                                    f"Alert #{alert['alert_id']} overridden. It is now in the audit trail.")
+                                st.rerun()
+                            else:
+                                st.warning(f"Alert #{alert['alert_id']} was already overridden.")
+                        except pg_errors.InsufficientPrivilege:
+                            st.error("Your role is not allowed to do this")
+        else:
+            st.caption("🔒 Only doctors can override alerts.")
 
-            override_reason = st.text_area(
-                "Clinical Override Reason / Justification *",
-                placeholder="e.g. Patient previously tolerated combination under close monitoring; benefit outweighs risk.",
-                help="Enter a clear clinical justification. An empty reason will be rejected.",
-            )
-
-            override_submitted = st.form_submit_button("🛡️ Override Alert", use_container_width=True)
-
-            if override_submitted:
-                clean_reason = override_reason.strip() if override_reason else ""
-                if not clean_reason:
-                    st.error("Override reason is required. An alert cannot be overridden without clinical justification.")
-                else:
-                    try:
-                        success = db.override_alert(conn, chosen_alert_id, clean_reason)
-                        if success:
-                            st.success(f"Alert #{chosen_alert_id} overridden successfully!")
-                            st.rerun()
-                        else:
-                            st.warning(f"Alert #{chosen_alert_id} could not be overridden (it may have already been overridden).")
-                    except pg_errors.InsufficientPrivilege:
-                        st.error("Your role is not allowed to do this")
-                    except Exception as e:
-                        st.error(f"Failed to override alert: {e}")
-
-else:
-    st.info("ℹ️ **Pharmacist / View-Only Mode**: Only doctors can override clinical safety alerts.")
+with tab_audit:
+    trail = db.get_overridden_alerts(conn)
+    if not trail:
+        st.info("No alerts have been overridden yet.")
+    else:
+        df = pd.DataFrame(trail)
+        df["alert_type"] = df["alert_type"].map(ui.ALERT_TYPE_LABEL).fillna(df["alert_type"])
+        st.dataframe(
+            df[["alert_id", "severity", "alert_type", "patient", "medication", "override_reason", "created_at"]],
+            hide_index=True, width="stretch",
+            column_config={
+                "alert_id": st.column_config.NumberColumn("Alert #", format="%d", width="small"),
+                "severity": "Severity", "alert_type": "Type", "patient": "Patient", "medication": "Medicine",
+                "override_reason": st.column_config.TextColumn("Override reason", width="large"),
+                "created_at": st.column_config.DatetimeColumn("Raised", format="DD MMM YYYY, HH:mm"),
+            })
+        st.caption("Alerts are never deleted: the database lets a doctor change only the overridden flag "
+                   "and the reason (column-level GRANT in sql/roles.sql).")

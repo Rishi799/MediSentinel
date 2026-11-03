@@ -1,0 +1,23 @@
+# MediSentinel look and feel (Streamlit reads this when started from the repo root)
+[theme]
+base = "light"
+primaryColor = "#0F766E"
+backgroundColor = "#F6F8FA"
+secondaryBackgroundColor = "#EEF2F6"
+textColor = "#0F172A"
+font = "sans-serif"
+baseRadius = "0.6rem"
+borderColor = "#E2E8F0"
+showWidgetBorder = true
+
+[theme.sidebar]
+backgroundColor = "#0B1F33"
+secondaryBackgroundColor = "#13304D"
+textColor = "#E2E8F0"
+borderColor = "#1E3A5F"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
