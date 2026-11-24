@@ -32,6 +32,7 @@ severity_color = alt.Color(
     legend=alt.Legend(orient="top"),
 )
 axis = alt.Axis(minExtent=41)
+chart_font = "Inter, system-ui, sans-serif"
 
 
 def chart_card(key, title, caption, rows, make_chart, empty):
@@ -41,9 +42,9 @@ def chart_card(key, title, caption, rows, make_chart, empty):
         frame = pd.DataFrame(rows)
         if rows:
             chart = (make_chart(frame).properties(height=228, background="#FFFFFF")
-                     .configure(font="Inter")
-                     .configure_axis(labelFont="Inter", titleFont="Inter", gridColor="#E2E8F0")
-                     .configure_legend(labelFont="Inter", titleFont="Inter")
+                     .configure(font=chart_font)
+                     .configure_axis(labelFont=chart_font, titleFont=chart_font, gridColor="#E2E8F0")
+                     .configure_legend(labelFont=chart_font, titleFont=chart_font)
                      .configure_view(stroke=None))
             st.altair_chart(chart, theme=None, width="stretch", alt=title)
         else:
@@ -53,10 +54,11 @@ def chart_card(key, title, caption, rows, make_chart, empty):
 
 
 def learned_chart(data):
+    upper = max(1, int(data.groupby("kind")["rules"].sum().max()))
     return alt.Chart(data).mark_bar().encode(
         x=alt.X("kind:N", title="Rule type", axis=alt.Axis(labelAngle=0, minExtent=38)),
-        y=alt.Y("sum(rules):Q", title="FDA-derived rules", scale=alt.Scale(domainMin=0, nice=True),
-                axis=alt.Axis(tickMinStep=1, minExtent=41)),
+        y=alt.Y("sum(rules):Q", title="FDA-derived rules", scale=alt.Scale(domain=[0, upper]),
+                axis=alt.Axis(format="d", tickMinStep=1, minExtent=41)),
         color=severity_color,
         tooltip=["kind:N", "severity:N", alt.Tooltip("sum(rules):Q", title="Rules")],
     )
