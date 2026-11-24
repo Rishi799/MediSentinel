@@ -93,6 +93,7 @@ else:
         ],
         "Surveillance": [
             st.Page(pages / "4_Drug_Safety.py", title="Drug safety data", icon=":material/monitoring:"),
+            st.Page(pages / "5_Analytics.py", title="Analytics", icon=":material/insights:"),
         ],
     })
     session.render_sidebar_status()
