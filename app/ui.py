@@ -50,6 +50,7 @@ h1, h2, h3 {letter-spacing: -0.01em;}
     border: 1px solid #E2E8F0;}
 .ms-chip.ms-warn {background: #FDECEC; border-color: #F5C2C2; color: #8A1C1C;}
 .ms-muted {color: #64748B; font-size: 0.85rem;}
+div.stVerticalBlock[class*="st-key-card_"] {background: #FFFFFF; border-radius: 0.6rem;}
 
 .ms-alert {border: 1px solid #E2E8F0; border-left-width: 5px; border-radius: 12px;
     padding: 0.75rem 0.95rem; margin-bottom: 0.6rem; background: #FFFFFF;}

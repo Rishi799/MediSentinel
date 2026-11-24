@@ -2,9 +2,15 @@
 import csv
 from collections import Counter
 
+import sys
+from pathlib import Path
+
 from pymongo import MongoClient
 
 from medisentinel import config, db
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from ml.features import FEATURE_NAMES, ROOT, age_in_years, medication_features, normalize_name, safety_data
 
 DATA_PATH = ROOT / "data" / "train.csv"
