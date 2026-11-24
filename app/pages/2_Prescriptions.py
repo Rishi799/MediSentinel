@@ -6,6 +6,7 @@ from psycopg import errors as pg_errors
 
 from app import session, ui, validation
 from medisentinel import constants, db
+from ml.score import alert_inputs, predict_risk
 
 conn = session.require_login()
 
@@ -124,7 +125,7 @@ if session.can_write():
             result = st.session_state.pop("rx_result", None)
             if result:
                 prescription_id, patient_name, alerts = result
-                with st.container(border=True):
+                with st.container(border=True, key="card_1"):
                     st.markdown(f"##### Safety check result · Prescription #{prescription_id} for "
                                 f"{patient_name}")
                     if not alerts:
@@ -133,8 +134,25 @@ if session.can_write():
                         majors = sum(1 for a in alerts if a["severity"] == "MAJOR")
                         st.warning(f"Saved with {len(alerts)} safety alert(s), {majors} major. Review them "
                                    "before dispensing.", icon=":material/warning:")
+                        inputs = {row["alert_id"]: row for row in alert_inputs(
+                            conn, [alert["alert_id"] for alert in alerts])}
                         for alert in alerts:
-                            ui.alert_card(alert)
+                            row = inputs.get(alert["alert_id"])
+                            score = row["risk_score"] if row else None
+                            live = False
+                            if score is None and row:
+                                try:
+                                    score = round(predict_risk(row["features"]), 3)
+                                    live = True
+                                except (FileNotFoundError, ValueError):
+                                    pass
+                            card, meter = st.columns([2, 1], vertical_alignment="center")
+                            with card:
+                                ui.alert_card(alert)
+                            with meter:
+                                ui.risk_meter(score)
+                                if live:
+                                    st.caption("Live estimate")
                         st.page_link("pages/3_Alerts.py", label="Review or override on the Alerts page",
                                      icon=":material/arrow_forward:")
 
