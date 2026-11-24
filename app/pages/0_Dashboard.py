@@ -14,7 +14,10 @@ ui.page_header("📊", "Dashboard", "Live overview of patients, prescriptions an
 
 counts = db.dashboard_counts(conn)
 
-c1, c2, c3, c4, c5 = st.columns(5)
+high_risk = conn.execute("SELECT count(*) AS n FROM Alert_Log WHERE risk_score >= %s",
+                         (0.66,)).fetchone()["n"]
+
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     ui.kpi("Patients", counts["patients"], "registered", tone="accent")
 with c2:
@@ -25,6 +28,8 @@ with c4:
     ui.kpi("Overridden", counts["overridden_alerts"], "with a recorded reason")
 with c5:
     ui.kpi("Medicines", counts["medications"], "in the catalogue")
+with c6:
+    ui.kpi("High-risk alerts", high_risk, "score ≥ 66%", tone="critical")
 
 if role in ("doctor", "admin"):
     st.write("")

@@ -80,7 +80,8 @@ def apply_styles():
 
 def page_header(icon, title, subtitle=""):
     sub = f"<p>{escape(subtitle)}</p>" if subtitle else ""
-    st.markdown(f'<div class="ms-header"><div class="ms-icon">{icon}</div>'
+    mark = f'<div class="ms-icon">{icon}</div>' if icon else ""
+    st.markdown(f'<div class="ms-header">{mark}'
                 f'<div><h1>{escape(title)}</h1>{sub}</div></div>', unsafe_allow_html=True)
 
 
@@ -113,6 +114,33 @@ def alert_card(alert, meta=""):
         f'<span class="ms-alert-title">{escape(kind)} · {escape(str(alert.get("medication", "")))}</span></div>'
         f'<div class="ms-alert-msg">{escape(str(alert.get("message", "")))}</div>{meta_html}</div>',
         unsafe_allow_html=True)
+
+
+def risk_meter(score):
+    """Show a model score with an accessible percentage and a named band."""
+    if score is None:
+        st.caption("Not scored yet")
+        return
+    score = float(score)
+    if score < 0.33:
+        label, severity = "Low", "MINOR"
+    elif score < 0.66:
+        label, severity = "Medium", "MODERATE"
+    else:
+        label, severity = "High", "MAJOR"
+    color = SEVERITY_STYLE[severity]["color"]
+    percentage = f"{score:.1%}"
+    st.markdown(
+        f'<div style="display:grid;gap:0.32rem;padding:0.2rem 0 0.55rem">'
+        f'<span style="color:{color};font-size:0.85rem;font-weight:650">'
+        f'{label} · {percentage}</span>'
+        f'<div role="meter" aria-label="{label} model score" aria-valuemin="0" '
+        f'aria-valuemax="100" aria-valuenow="{score * 100:.1f}" '
+        f'aria-valuetext="{label} {percentage}" '
+        f'style="height:0.42rem;border-radius:1rem;background:#E2E8F0;overflow:hidden">'
+        f'<div style="height:100%;width:{percentage};background:{color}"></div></div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def chips(items, warn=False, empty="None recorded"):

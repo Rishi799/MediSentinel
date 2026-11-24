@@ -5,12 +5,13 @@ import streamlit as st
 from psycopg import errors as pg_errors
 
 from app import session, ui
+from app.explain import explain_alert
 from medisentinel import db
 
 conn = session.require_login()
 is_doctor = session.get_role() == "doctor"
 
-ui.page_header("🚨", "Safety alerts", "Raised only by the database trigger. Doctors may override one with a "
+ui.page_header("", "Safety alerts", "Raised only by the database trigger. Doctors may override one with a "
                                      "clinical reason, which is kept as an audit trail.")
 
 flash = st.session_state.pop("alerts_flash", None)
@@ -65,12 +66,31 @@ with tab_active:
                 "created_at": st.column_config.DatetimeColumn("Raised", format="DD MMM YYYY, HH:mm"),
             })
 
+        choices = {f"#{a['alert_id']} · {a['severity']} · {a['patient']} · {a['medication']}": a
+                   for a in alerts}
+        with st.container(border=True, key="card_1"):
+            selected = st.selectbox("Select an alert to inspect", options=list(choices), key="inspect_alert")
+            detail = explain_alert(conn, choices[selected]["alert_id"])
+            if detail:
+                st.markdown("##### Model score")
+                ui.risk_meter(detail["score"])
+                st.markdown("##### Why this alert")
+                st.text(detail["message"] or "")
+                st.caption(detail["status"])
+                if detail.get("sentence"):
+                    st.text(detail["sentence"], width="stretch")
+                elif detail.get("source_id"):
+                    st.caption("Matching sentence unavailable.")
+                if detail.get("brand"):
+                    st.text(detail["brand"])
+                if detail.get("source_id"):
+                    st.link_button(f"Source: openFDA label {detail['source_id']}", detail["url"],
+                                   icon=":material/open_in_new:")
+
         if is_doctor:
-            with st.container(border=True):
+            with st.container(border=True, key="card_2"):
                 st.markdown("##### Override an alert")
                 st.caption("Only when the clinical benefit outweighs the risk. The reason is stored with the alert.")
-                choices = {f"#{a['alert_id']} · {a['severity']} · {a['patient']} · {a['medication']}": a
-                           for a in alerts}
                 with st.form("alert_override_form", border=False, clear_on_submit=True):
                     chosen = st.selectbox("Alert *", options=list(choices.keys()))
                     reason = st.text_area("Clinical reason *", max_chars=500,
