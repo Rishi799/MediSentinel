@@ -24,3 +24,4 @@ docs/
 
 # Phase 2 generated extraction output
 nlp/output/
+nlp/gold/gold_sheet.csv
