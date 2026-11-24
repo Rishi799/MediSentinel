@@ -27,3 +27,10 @@ def test_saved_model_probability():
     model = joblib.load(MODEL_PATH)["model"]
     probability = model.predict_proba([feature_vector(58, 1, 4, 3, 2, True)])[0, 1]
     assert 0 <= probability <= 1
+
+
+@pytest.mark.skipif(not MODEL_PATH.exists(), reason="Run the FAERS training command to produce the model")
+def test_predict_risk():
+    from ml.score import predict_risk
+
+    assert 0 <= predict_risk(feature_vector(58, 1, 4, 3, 2, True)) <= 1
