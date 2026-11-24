@@ -21,3 +21,6 @@ build/
 
 # project documents (kept locally, not on GitHub)
 docs/
+
+# Phase 2 generated extraction output
+nlp/output/
