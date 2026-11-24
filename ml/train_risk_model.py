@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+import sys
+
 import joblib
 import matplotlib
 matplotlib.use("Agg")
@@ -17,6 +19,9 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ml.build_dataset import DATA_PATH
 from ml.features import FEATURE_NAMES, ROOT
