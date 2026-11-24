@@ -4,9 +4,15 @@ import csv
 import json
 import random
 
+import sys
+from pathlib import Path
+
 from pymongo import MongoClient
 
 from medisentinel import config
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from nlp.extract_rules import ROOT, SECTIONS, label_drugs, label_sentences, load_extractor
 
 GOLD_PATH = ROOT / "gold" / "gold_sheet.csv"
