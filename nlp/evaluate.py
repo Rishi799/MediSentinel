@@ -3,6 +3,12 @@ import argparse
 import csv
 import json
 
+import sys
+from pathlib import Path
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from nlp.extract_rules import ROOT, SEVERITY_RANK, normalize
 from nlp.make_gold_sheet import FIELDS, GOLD_PATH, SNAPSHOT_PATH
 
