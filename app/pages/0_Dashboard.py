@@ -32,7 +32,7 @@ with c1:
 with c2:
     ui.kpi("Prescriptions", counts["prescriptions"], f"Written by {counts['doctors']} doctors", "file", "teal")
 with c3:
-    ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major · awaiting review",
+    ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major to review",
            "alert", "danger")
 with c4:
     ui.kpi("High-risk alerts", high_risk, "Model risk score ≥ 66%", "activity", "danger")
@@ -44,7 +44,8 @@ left, right = st.columns([1.35, 1], gap="medium")
 
 with left:
     with st.container(border=True, key="card_1"):
-        ui.card_title("Activity · last 30 days", f"{month_rx} prescriptions written and {month_alerts} alerts raised.")
+        ui.card_title("Activity · last 30 days", f"{month_rx} prescriptions written and {month_alerts} alerts raised "
+                                                "(square-root scale, so small days stay visible).")
         df = pd.DataFrame(activity)
         df["day"] = pd.to_datetime(df["day"])
         long = df.melt(id_vars="day", value_vars=["prescriptions", "alerts"], var_name="series", value_name="count")
@@ -52,8 +53,9 @@ with left:
         base = alt.Chart(long).encode(
             x=alt.X("day:T", title=None, axis=alt.Axis(format="%d %b", labelColor="#8A98A8", grid=False, ticks=False,
                                                       domain=False, tickCount=8, labelPadding=8)),
-            y=alt.Y("count:Q", title=None, axis=alt.Axis(gridColor="#EEF3F7", labelColor="#8A98A8", domain=False,
-                                                        ticks=False, tickMinStep=1, format="d", minExtent=34)),
+            y=alt.Y("count:Q", title=None, scale=alt.Scale(type="sqrt"),
+                    axis=alt.Axis(gridColor="#EEF3F7", labelColor="#8A98A8", domain=False, ticks=False,
+                                  values=[0, 5, 25, 50, 100, 200, 300, 400], format="d", minExtent=34)),
             color=alt.Color("series:N", scale=alt.Scale(domain=["Prescriptions", "Alerts"],
                                                         range=[ui.BRAND, ui.SEVERITY_STYLE["MAJOR"]["color"]]),
                             legend=alt.Legend(orient="top", title=None, labelColor="#5C6B7D", symbolType="circle",
@@ -61,15 +63,10 @@ with left:
         )
         area = base.mark_area(opacity=0.08, interpolate="monotone")
         line = base.mark_line(strokeWidth=2.2, interpolate="monotone")
-        points = base.mark_circle(size=42).encode(
+        points = base.transform_filter("datum.count > 0").mark_circle(size=46, opacity=1).encode(
             tooltip=[alt.Tooltip("day:T", title="Day", format="%d %b"), alt.Tooltip("series:N", title="Series"),
                      alt.Tooltip("count:Q", title="Count")])
-        chart = (
-            (area + line + points).properties(height=330)
-            .configure_view(stroke=None)
-            .configure(font="Inter", background="#FFFFFF", padding={"left": 8, "right": 12, "top": 4, "bottom": 4},
-                       autosize=alt.AutoSizeParams(type="fit", contains="padding"))
-        )
+        chart = ui.chart_style(area + line + points, 420)
         st.altair_chart(chart, width="stretch", theme=None)
 
 with right:
@@ -116,11 +113,8 @@ with left2:
                     order=alt.Order("rank:Q"),
                     tooltip=[alt.Tooltip("Type:N"), alt.Tooltip("Severity:N"), alt.Tooltip("n:Q", title="Alerts")],
                 )
-                .properties(height=190)
-                .configure_view(stroke=None)
-                .configure(font="Inter", background="#FFFFFF", padding={"left": 16, "right": 12, "top": 4, "bottom": 4},
-                           autosize=alt.AutoSizeParams(type="fit", contains="padding"))
             )
+            chart = ui.chart_style(chart, 190)
             st.altair_chart(chart, width="stretch", theme=None)
 
 with right2:

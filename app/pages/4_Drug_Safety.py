@@ -44,14 +44,11 @@ def bar_chart(rows, label, height=300):
                                   labelPadding=8, minExtent=170)),
             x=alt.X("Reports:Q", title=None,
                     axis=alt.Axis(gridColor="#EEF3F7", labelColor="#8A98A8", domain=False, ticks=False,
-                                  tickMinStep=1)),
+                                  tickMinStep=1, tickCount=5, format="~s")),
             tooltip=[alt.Tooltip(f"{label}:N"), alt.Tooltip("Reports:Q", format=",")],
         )
-        .properties(height=height)
-        .configure_view(stroke=None)
-        .configure(font="Inter", background="#FFFFFF", padding={"left": 16, "right": 12, "top": 4, "bottom": 4},
-                   autosize=alt.AutoSizeParams(type="fit", contains="padding"))
     )
+    chart = ui.chart_style(chart, height)
     st.altair_chart(chart, width="stretch", theme=None)
 
 

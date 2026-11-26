@@ -20,6 +20,24 @@ MUTED = "#8A98A8"        # supporting text
 LINE = "#E8EEF3"         # borders
 TINT = "#F6F9F8"         # soft surfaces
 CHART_BLUE = BRAND
+# one chart look for every page: same font, axis greys, grid and legend
+CHART_GRID, CHART_LABEL, CHART_AXIS = "#EEF3F7", "#3C4E63", "#8A98A8"
+
+
+def chart_style(chart, height=240):
+    """Apply the shared MediSentinel chart theme (Inter, white, quiet axes, legend top-left) to an Altair chart."""
+    import altair as alt
+    return (chart.properties(height=height)
+            .configure(font="Inter", background="#FFFFFF",
+                       padding={"left": 4, "right": 14, "top": 6, "bottom": 4},
+                       autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+            .configure_axis(labelColor=CHART_AXIS, titleColor=CHART_AXIS, titleFontWeight=500, titleFontSize=11,
+                            labelFontSize=11, gridColor=CHART_GRID, domain=False, ticks=False, labelPadding=8,
+                            titlePadding=10)
+            .configure_axisBand(labelColor=CHART_LABEL, labelFontSize=12)
+            .configure_legend(orient="top", title=None, labelColor="#5C6B7D", labelFontSize=12,
+                              symbolType="circle", symbolSize=80, symbolOpacity=1, columnPadding=18, offset=10)
+            .configure_view(stroke=None))
 
 # Severity = calm status colours; always shown with a dot and a word, never colour alone.
 SEVERITY_STYLE = {
@@ -94,6 +112,16 @@ button[kind^="secondary"] p, button[kind^="tertiary"] p {color: inherit;}
 .stVerticalBlock[class*="st-key-card_"]:hover {box-shadow: 0 6px 18px rgba(32, 53, 74, 0.06);}
 .stVerticalBlock[class*="st-key-card_"] [data-testid="stForm"] {box-shadow: none; padding: 0;}
 
+/* equal-height rows: cards side by side stretch to the tallest one (the last card in a column grows) */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+    > [data-testid="stLayoutWrapper"] > .stVerticalBlock[class*="st-key-card_"]) {align-items: stretch;}
+[data-testid="stColumn"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]
+    > .stVerticalBlock[class*="st-key-card_"]) > [data-testid="stVerticalBlock"] {height: 100%;}
+[data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+    > [data-testid="stLayoutWrapper"]:last-child:has(> .stVerticalBlock[class*="st-key-card_"]) {flex: 1 1 auto;}
+[data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+    > [data-testid="stLayoutWrapper"]:last-child > .stVerticalBlock[class*="st-key-card_"] {height: 100%;}
+
 /* inputs, buttons, tabs */
 [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] {border-radius: 10px !important;}
 [data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within,
@@ -143,7 +171,7 @@ button[kind^="secondary"] p, button[kind^="tertiary"] p {color: inherit;}
 
 /* KPI cards */
 .ms-kpi {background: #FFFFFF; border: 1px solid #E8EEF3; border-radius: 14px; padding: 1.1rem 1.2rem;
-    box-shadow: 0 1px 2px rgba(32, 53, 74, 0.04); height: 100%; transition: box-shadow 0.2s ease, transform 0.2s ease;}
+    box-shadow: 0 1px 2px rgba(32, 53, 74, 0.04); height: 100%; box-sizing: border-box; transition: box-shadow 0.2s ease, transform 0.2s ease;}
 .ms-kpi:hover {box-shadow: 0 8px 20px rgba(32, 53, 74, 0.07); transform: translateY(-2px);}
 .ms-kpi-top {display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;}
 .ms-kpi-label {color: #5C6B7D; font-size: 0.84rem; font-weight: 500;}
@@ -154,7 +182,7 @@ button[kind^="secondary"] p, button[kind^="tertiary"] p {color: inherit;}
 .ms-kpi-icon.teal {color: #3F978B; background: #EFF8F6;}
 .ms-kpi-value {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.95rem; font-weight: 700;
     color: #20354A; letter-spacing: -0.02em; margin-top: 0.4rem; font-variant-numeric: tabular-nums; line-height: 1.15;}
-.ms-kpi-note {color: #8A98A8; font-size: 0.8rem; margin-top: 0.25rem;}
+.ms-kpi-note {color: #8A98A8; font-size: 0.8rem; margin-top: 0.25rem; line-height: 1.35;}
 
 /* card headings inside containers */
 .ms-card-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.02rem; font-weight: 650;
@@ -192,6 +220,9 @@ button[kind^="secondary"] p, button[kind^="tertiary"] p {color: inherit;}
     white-space: nowrap;}
 .ms-table td {padding: 0.75rem 0.85rem; border-bottom: 1px solid #F0F4F8; color: #516174; vertical-align: top;}
 .ms-table tr:last-child td {border-bottom: none;}
+.ms-pair {display: flex; flex-direction: column; gap: 0.1rem; min-width: 0;}
+.ms-pair b {color: #20354A; font-weight: 500;}
+.ms-pair span {color: #7A8898; font-size: 0.82rem;}
 .ms-table td.strong {color: #20354A; font-weight: 500;}
 .ms-table td.num {font-variant-numeric: tabular-nums; white-space: nowrap;}
 .ms-table tbody tr {transition: background 0.12s ease;}

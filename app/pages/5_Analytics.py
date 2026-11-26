@@ -14,18 +14,12 @@ ui.page_header("Analytics", "Rules learned from FDA labels, model risk scores, a
 SEVERITIES = ["MAJOR", "MODERATE", "MINOR"]
 SEVERITY_LABELS = [ui.SEVERITY_STYLE[s]["label"] for s in SEVERITIES]
 SEVERITY_SCALE = alt.Scale(domain=SEVERITY_LABELS, range=[ui.SEVERITY_STYLE[s]["color"] for s in SEVERITIES])
-GRID, LABEL, MUTED = "#EEF3F7", "#3C4E63", "#8A98A8"
+LABEL, MUTED = ui.CHART_LABEL, ui.CHART_AXIS
 
 
 def styled(chart, height=240):
-    """The same look as the Dashboard charts: Inter, white background, quiet axes, legend on top."""
-    return (chart.properties(height=height)
-            .configure(font="Inter", background="#FFFFFF", padding={"left": 8, "right": 12, "top": 4, "bottom": 4},
-                       autosize=alt.AutoSizeParams(type="fit", contains="padding"))
-            .configure_axis(labelColor=MUTED, titleColor=MUTED, titleFontWeight=500, titleFontSize=11,
-                            gridColor=GRID, domain=False, ticks=False, labelPadding=6)
-            .configure_legend(orient="top", title=None, labelColor="#5C6B7D", symbolType="circle", symbolSize=70)
-            .configure_view(stroke=None))
+    """The shared chart look (same as the Dashboard and Drug safety pages)."""
+    return ui.chart_style(chart, height)
 
 
 def severity_label(series):
@@ -80,9 +74,9 @@ with left:
                 tooltip=[alt.Tooltip("kind:N", title="Rule type"), "Severity:N",
                          alt.Tooltip("sum(rules):Q", title="Rules")],
             ).transform_calculate(rank="indexof(['Major','Moderate','Minor'], datum.Severity)")
-            st.altair_chart(styled(chart, 170), width="stretch", theme=None)
+            st.altair_chart(styled(chart, 150), width="stretch", theme=None)
             ui.label("Medicines with the most learned rules")
-            top = queries.rules_per_medicine(conn, limit=6)
+            top = queries.rules_per_medicine(conn, limit=5)
             if top:
                 ui.bar_list([(r["medicine"], r["rules"], "rules") for r in top])
 
@@ -102,19 +96,19 @@ with right:
             chart = alt.Chart(dist).mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3, stroke="#FFFFFF",
                                              strokeWidth=1).encode(
                 x=alt.X("Score band:O", title="Risk score", scale=alt.Scale(domain=bands),
-                        axis=alt.Axis(labelAngle=-40, labelColor=MUTED)),
+                        axis=alt.Axis(labelAngle=-35, labelColor=MUTED, labelFontSize=10)),
                 y=alt.Y("alerts:Q", title="Alerts", stack="zero",
                         axis=alt.Axis(format="d", tickMinStep=1, minExtent=30)),
                 color=alt.Color("Severity:N", scale=SEVERITY_SCALE, sort=SEVERITY_LABELS),
                 order=alt.Order("rank:Q"),
                 tooltip=["Score band:N", "Severity:N", alt.Tooltip("alerts:Q", title="Alerts")],
             ).transform_calculate(rank="indexof(['Major','Moderate','Minor'], datum.Severity)")
-            st.altair_chart(styled(chart, 290), width="stretch", theme=None)
+            st.altair_chart(styled(chart, 360), width="stretch", theme=None)
             st.caption("Scores of 66% and above are shown as \"High\" on each alert's risk meter.")
 
 # ---------------- signals ----------------
 st.write("")
-left, right = st.columns([1.2, 1], gap="medium")
+left, right = st.columns([1, 1], gap="medium")
 with left:
     with st.container(border=True, key="card_3"):
         ui.card_title("Signal map", "Each point is a medicine–reaction pair from the adverse-event reports. Both "
@@ -125,29 +119,31 @@ with left:
             frame = pd.DataFrame(signals)
             frame["Status"] = frame["prr"].map(lambda p: "Signal (PRR ≥ 2)" if p >= 2 else "Below threshold")
             points = alt.Chart(frame).mark_circle(opacity=0.75, stroke="#FFFFFF", strokeWidth=1).encode(
-                x=alt.X("reports:Q", title="Reports with the pair", scale=alt.Scale(type="log"),
-                        axis=alt.Axis(format="~s")),
-                y=alt.Y("prr:Q", title="PRR", scale=alt.Scale(type="log"), axis=alt.Axis(format="~s", minExtent=34)),
-                size=alt.Size("reports:Q", legend=None, scale=alt.Scale(range=[30, 260])),
+                x=alt.X("reports:Q", title="Reports with the pair (log scale)", scale=alt.Scale(type="log", nice=False),
+                        axis=alt.Axis(values=[1, 3, 10, 30, 100, 300, 1000], format="~s")),
+                y=alt.Y("prr:Q", title="PRR (log scale)", scale=alt.Scale(type="log"),
+                        axis=alt.Axis(values=[1, 2, 10, 100, 1000, 10000], format="~s", minExtent=34)),
+                size=alt.Size("reports:Q", legend=None, scale=alt.Scale(range=[40, 280])),
                 color=alt.Color("Status:N", scale=alt.Scale(domain=["Signal (PRR ≥ 2)", "Below threshold"],
-                                                            range=[ui.BRAND, "#8A98A8"])),
+                                                            range=[ui.BRAND, "#B7C2CE"])),
                 tooltip=[alt.Tooltip("medicine:N", title="Medicine"), alt.Tooltip("reaction:N", title="Reaction"),
                          alt.Tooltip("reports:Q", title="Reports"), alt.Tooltip("prr:Q", title="PRR", format=".2f")],
             )
-            threshold = alt.Chart(pd.DataFrame({"y": [2]})).mark_rule(strokeDash=[5, 4], color="#7A8898").encode(
+            threshold = alt.Chart(pd.DataFrame({"y": [2]})).mark_rule(strokeDash=[5, 4], color=ui.SEVERITY_STYLE["MAJOR"]["color"], strokeWidth=1.5).encode(
                 y="y:Q")
-            st.altair_chart(styled(points + threshold, 300), width="stretch", theme=None)
+            st.altair_chart(styled(points + threshold, 470), width="stretch", theme=None)
 with right:
     with st.container(border=True, key="card_4"):
         ui.card_title("Strongest signals", "At least 3 reports, ranked by proportional reporting ratio.")
-        top = queries.top_signals(conn, limit=8)
+        top = queries.top_signals(conn, limit=7)
         if not top:
             ui.empty_state("activity", "No signals yet", "Run python -m analytics.signal_mining.")
         else:
-            rows = [{"medicine": r["medicine"], "reaction": r["reaction"].capitalize(), "reports": f"{r['reports']:,}",
-                     "prr": f"{r['prr']:,.1f}"} for r in top]
-            ui.table(rows, [("medicine", "Medicine", "strong"), ("reaction", "Reaction", ""),
-                            ("reports", "Reports", "num"), ("prr", "PRR", "num")])
+            rows = [{"pair": f'<div class="ms-pair"><b>{ui.escape(r["medicine"])}</b>'
+                             f'<span>{ui.escape(r["reaction"].capitalize())}</span></div>',
+                     "reports": f"{r['reports']:,}", "prr": f"{r['prr']:,.1f}"} for r in top]
+            ui.table(rows, [("pair", "Medicine · reaction", "html"), ("reports", "Reports", "num"),
+                            ("prr", "PRR", "num")])
             st.caption("A high PRR can also reflect why the drug was prescribed (e.g. levothyroxine and "
                        "hypothyroidism); signals need clinical review.")
 
