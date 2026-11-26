@@ -78,3 +78,38 @@ def alerts_by_department(conn):
 
 def recent_overrides(conn):
     return db.get_overridden_alerts(conn, limit=20)
+
+
+def risk_summary(conn):
+    """Mean model score and how many active alerts are high risk (score >= 0.66)."""
+    return conn.execute("""
+        SELECT avg(risk_score)::float AS mean_score,
+               count(*) FILTER (WHERE risk_score >= 0.66 AND NOT overridden) AS high_risk
+        FROM Alert_Log WHERE risk_score IS NOT NULL
+    """).fetchone()
+
+
+def top_signals(conn, limit=8):
+    """Strongest signals with at least 3 reports, strongest first."""
+    return conn.execute("""
+        SELECT m.name AS medicine, s.reaction_term AS reaction, s.report_count AS reports,
+               s.prr::float AS prr, s.ror::float AS ror
+        FROM Adverse_Signal s JOIN Medication m USING (med_id)
+        WHERE s.report_count >= 3 AND s.prr IS NOT NULL
+        ORDER BY s.prr DESC, s.report_count DESC LIMIT %s
+    """, (limit,)).fetchall()
+
+
+def rules_per_medicine(conn, limit=8):
+    """Medicines with the most FDA-derived interaction and contraindication rules (catalogue generics only)."""
+    return conn.execute("""
+        WITH r AS (
+            SELECT med_id_1 AS med_id FROM Interaction WHERE source_label_id IS NOT NULL
+            UNION ALL SELECT med_id_2 FROM Interaction WHERE source_label_id IS NOT NULL
+            UNION ALL SELECT med_id FROM Contraindication WHERE source_label_id IS NOT NULL
+        )
+        SELECT m.name AS medicine, count(*) AS rules
+        FROM r JOIN Medication m USING (med_id)
+        WHERE m.rxcui IS NOT NULL OR m.med_id <= 10
+        GROUP BY m.name ORDER BY rules DESC, m.name LIMIT %s
+    """, (limit,)).fetchall()

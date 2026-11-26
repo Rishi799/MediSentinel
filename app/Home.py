@@ -50,9 +50,7 @@ def login_page():
             f'<h1>Medication safety,<br>enforced by the database.</h1>'
             f'<p class="lead">Real-time interaction, contraindication and allergy checks for every prescription, '
             f'with an audit trail for every override.</p>'
-            f'<div class="ms-hero-list">{rows}</div>'
-            f'<div class="ms-hero-foot">DBMS Laboratory (CD252IA) · RV College of Engineering · '
-            f'Dept. of CSE (AI &amp; ML)</div></div>', unsafe_allow_html=True)
+            f'<div class="ms-hero-list">{rows}</div></div>', unsafe_allow_html=True)
 
     with form_col:
         st.markdown('<div style="height:5.5rem"></div><h2 class="ms-signin-title">Sign in</h2>'
