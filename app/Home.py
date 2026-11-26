@@ -20,7 +20,7 @@ st.set_page_config(
     page_title="MediSentinel",
     page_icon=str(APP_DIR / "assets" / "icon.svg"),
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 ui.apply_styles()
 session.init_session()
@@ -47,7 +47,7 @@ def login_page():
         st.markdown(
             f'<div class="ms-hero"><div class="ms-hero-brand"><div class="ms-hero-mark">'
             f'{ui.icon("shield", 18, "#FFFFFF")}</div>MediSentinel</div>'
-            f'<h1>Medication safety,<br>enforced by the database.</h1>'
+            f'<h1>Medication safety,<br><em>enforced by the database.</em></h1>'
             f'<p class="lead">Real-time interaction, contraindication and allergy checks for every prescription, '
             f'with an audit trail for every override.</p>'
             f'<div class="ms-hero-list">{rows}</div></div>', unsafe_allow_html=True)

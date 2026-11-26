@@ -2,31 +2,32 @@
 [theme]
 base = "light"
 font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Plus Jakarta Sans:https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
 baseFontSize = 15
 headingFontWeights = [700, 600, 600, 600, 600, 600]
 primaryColor = "#0E7A5C"
-backgroundColor = "#F6F7F9"
+backgroundColor = "#F6F9F8"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#101828"
-linkColor = "#0E7A5C"
-borderColor = "#E4E7EC"
-dataframeBorderColor = "#EAECF0"
-dataframeHeaderBackgroundColor = "#F9FAFB"
+textColor = "#20354A"
+linkColor = "#0B6B50"
+borderColor = "#E3EAF1"
+dataframeBorderColor = "#E8EEF3"
+dataframeHeaderBackgroundColor = "#F8FAFC"
 showWidgetBorder = true
-baseRadius = "8px"
-buttonRadius = "8px"
-redColor = "#D92D20"
-orangeColor = "#DC6803"
-blueColor = "#1570EF"
-greenColor = "#079455"
-chartCategoricalColors = ["#0E7A5C", "#1570EF", "#DC6803", "#7A5AF8", "#D92D20"]
+baseRadius = "10px"
+buttonRadius = "10px"
+redColor = "#D46A6A"
+orangeColor = "#D9A441"
+yellowColor = "#D9A441"
+blueColor = "#6F94BE"
+greenColor = "#4FAE8A"
+chartCategoricalColors = ["#0E7A5C", "#65B8AD", "#D9A441", "#8E9CC9", "#D46A6A"]
 
 [theme.sidebar]
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F4F7"
-textColor = "#344054"
-borderColor = "#EAECF0"
+secondaryBackgroundColor = "#F6F9F8"
+textColor = "#3C4E63"
+borderColor = "#E8EEF3"
 showSidebarBorder = true
 
 [client]

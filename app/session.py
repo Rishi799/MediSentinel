@@ -157,7 +157,7 @@ def render_sidebar_status() -> None:
         rows = [("PostgreSQL", pg_ok, "Connected" if pg_ok else "Offline"),
                 ("MongoDB", mongo_ok, "Connected" if mongo_ok else "Offline")]
         status = "".join(
-            f'<div class="ms-status-row"><span class="ms-status-dot" style="background:{"#17B26A" if ok else "#F04438"}">'
+            f'<div class="ms-status-row"><span class="ms-status-dot" style="background:{"#4FAE8A" if ok else "#D46A6A"}">'
             f'</span>{name}<span class="ms-status-val">{text}</span></div>' for name, ok, text in rows)
         st.markdown(f'<div class="ms-status"><div class="ms-status-title">System status</div>{status}'
                     f'<div class="ms-status-note">Every prescription is checked by the database trigger; '

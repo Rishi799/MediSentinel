@@ -1,5 +1,5 @@
 """Shared look and feel for every MediSentinel page: styles, icons, page headers, KPI cards,
-severity pills, alert lists and small tables.
+severity pills, alert lists, risk scale and small tables.
 
 All text that comes from the database goes through html.escape before it is placed inside
 HTML, so a name such as "<script>" is shown as text and never run.
@@ -10,18 +10,24 @@ from html import escape
 
 import streamlit as st
 
-# ---------- design tokens ----------
-BRAND = "#0E7A5C"
-INK = "#101828"
-MUTED = "#667085"
-CHART_BLUE = "#1570EF"
+# ---------- design tokens: white-dominant, medical green and teal ----------
+BRAND = "#0E7A5C"        # medical green (primary)
+BRAND_DARK = "#0B6B50"
+TEAL = "#65B8AD"         # secondary accent
+INK = "#20354A"          # headings
+BODY = "#516174"         # body text
+MUTED = "#8A98A8"        # supporting text
+LINE = "#E8EEF3"         # borders
+TINT = "#F6F9F8"         # soft surfaces
+CHART_BLUE = BRAND
 
-# Severity = status colours; always shown with a dot and a word, never colour alone.
+# Severity = calm status colours; always shown with a dot and a word, never colour alone.
 SEVERITY_STYLE = {
-    "MAJOR":    {"color": "#D92D20", "bg": "#FEF3F2", "text": "#B42318", "border": "#FECDCA", "label": "Major"},
-    "MODERATE": {"color": "#DC6803", "bg": "#FFFAEB", "text": "#B54708", "border": "#FEDF89", "label": "Moderate"},
-    "MINOR":    {"color": "#1570EF", "bg": "#EFF8FF", "text": "#175CD3", "border": "#B2DDFF", "label": "Minor"},
+    "MAJOR":    {"color": "#D46A6A", "bg": "#FCF2F2", "text": "#A94444", "border": "#F2D6D6", "label": "Major"},
+    "MODERATE": {"color": "#D9A441", "bg": "#FCF7EB", "text": "#8F6A1E", "border": "#F1E2BE", "label": "Moderate"},
+    "MINOR":    {"color": "#7D9BC1", "bg": "#F2F6FB", "text": "#4C6A91", "border": "#D9E3F0", "label": "Minor"},
 }
+SUCCESS = {"color": "#4FAE8A", "bg": "#EFF8F4", "text": "#2F7A5E", "border": "#CDE9DD"}
 ALERT_TYPE_LABEL = {"INTERACTION": "Drug interaction", "CONTRA": "Contraindication", "ALLERGY": "Allergy"}
 ROLE_LABEL = {"doctor": "Doctor", "pharmacist": "Pharmacist", "admin": "Administrator"}
 
@@ -48,6 +54,9 @@ _ICONS = {
     "check": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
     "history": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'
                '<path d="M12 7v5l4 2"/>',
+    "heart": '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 '
+             '5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    "info": '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
 }
 
 
@@ -61,151 +70,210 @@ _CSS = """
 <style>
 html, body, [class*="css"] {-webkit-font-smoothing: antialiased;}
 header[data-testid="stHeader"] {background: transparent;}
-.block-container {padding-top: 2.4rem; padding-bottom: 4rem; max-width: 1240px;}
-h1, h2, h3, h4, h5 {letter-spacing: -0.015em; color: #101828;}
-p, li {color: #344054;}
+.block-container {padding-top: 2.4rem; padding-bottom: 4rem; max-width: 1240px;
+    animation: ms-enter 0.35s ease-out both;}
+@keyframes ms-enter {from {opacity: 0; transform: translateY(6px);} to {opacity: 1; transform: none;}}
+h1, h2, h3, h4, h5 {letter-spacing: -0.015em; color: #20354A;}
+p, li {color: #516174;}
 
 /* sidebar */
-[data-testid="stSidebar"] [data-testid="stSidebarNavLink"] {border-radius: 6px; margin: 1px 0;}
-[data-testid="stSidebar"] [data-testid="stSidebarNavLink"] span {font-weight: 500; font-size: 0.92rem;}
-[data-testid="stSidebar"] [data-testid="stNavSectionHeader"] {font-size: 0.7rem; letter-spacing: 0.06em;
-    text-transform: uppercase; color: #98A2B3; font-weight: 600;}
+[data-testid="stSidebar"] [data-testid="stSidebarNavLink"] {border-radius: 8px; margin: 2px 0;
+    transition: background 0.15s ease;}
+[data-testid="stSidebar"] [data-testid="stSidebarNavLink"] span {font-weight: 500; font-size: 0.92rem; color: #3C4E63;}
+[data-testid="stSidebar"] [data-testid="stSidebarNavLink"][aria-current="page"] {background: #ECFDF3;}
+[data-testid="stSidebar"] [data-testid="stSidebarNavLink"][aria-current="page"] span {color: #0B6B50; font-weight: 600;}
+[data-testid="stSidebar"] [data-testid="stNavSectionHeader"] {font-size: 0.7rem; letter-spacing: 0.07em;
+    text-transform: uppercase; color: #9AA8B6; font-weight: 600;}
 
 /* surfaces: bordered containers (keyed card_N) and forms become white cards */
 .stVerticalBlock[class*="st-key-card_"], [data-testid="stForm"] {background: #FFFFFF;
-    border-color: #EAECF0 !important; border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
-    padding: 1.15rem 1.25rem;}
+    border-color: #E8EEF3 !important; border-radius: 14px; box-shadow: 0 1px 2px rgba(32, 53, 74, 0.04);
+    padding: 1.25rem 1.35rem; transition: box-shadow 0.2s ease;}
+.stVerticalBlock[class*="st-key-card_"]:hover {box-shadow: 0 6px 18px rgba(32, 53, 74, 0.06);}
 .stVerticalBlock[class*="st-key-card_"] [data-testid="stForm"] {box-shadow: none; padding: 0;}
-.stTabs [data-baseweb="tab-list"] {gap: 1.4rem; border-bottom: 1px solid #EAECF0;}
-.stTabs [data-baseweb="tab"] {padding: 0.55rem 0; font-weight: 500;}
-.stButton button, .stFormSubmitButton button {font-weight: 600;}
-[data-testid="stDataFrame"] {border-radius: 8px;}
+
+/* inputs, buttons, tabs */
+[data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="textarea"] {border-radius: 10px !important;}
+[data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within,
+[data-baseweb="textarea"]:focus-within {box-shadow: 0 0 0 3px rgba(14, 122, 92, 0.15);}
+.stButton button, .stFormSubmitButton button {font-weight: 600; border-radius: 10px; transition: all 0.15s ease;}
+.stButton button[kind="primary"]:hover, .stFormSubmitButton button[kind="primaryFormSubmit"]:hover {
+    box-shadow: 0 4px 12px rgba(14, 122, 92, 0.28); transform: translateY(-1px);}
+.stButton button:active, .stFormSubmitButton button:active {transform: translateY(0); box-shadow: none;}
+[data-testid="stPageLink"] a {border-radius: 8px; transition: background 0.15s ease;}
+[data-testid="stPageLink"] a:hover {background: #ECFDF3;}
+.stTabs [data-baseweb="tab-list"] {gap: 1.4rem; border-bottom: 1px solid #E8EEF3;}
+.stTabs [data-baseweb="tab"] {padding: 0.6rem 0; font-weight: 500; color: #6B7A8C;}
+.stTabs [aria-selected="true"] {color: #20354A;}
+.stTabs [data-baseweb="tab-highlight"] {background: #0E7A5C; height: 2px;}
+[data-testid="stDataFrame"] {border-radius: 10px;}
+[data-testid="stAlert"] {border-radius: 12px;}
+[data-testid="stExpander"] details {border-radius: 12px; border-color: #E8EEF3;}
+::-webkit-scrollbar {width: 10px; height: 10px;}
+::-webkit-scrollbar-thumb {background: #D5DEE7; border-radius: 8px; border: 2px solid #F6F9F8;}
+::-webkit-scrollbar-thumb:hover {background: #AEBBC8;}
+::-webkit-scrollbar-track {background: transparent;}
 
 /* page header */
-.ms-eyebrow {font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-    color: #0E7A5C; margin-bottom: 0.25rem;}
-.ms-title {font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; color: #101828; margin: 0;
-    line-height: 1.25;}
-.ms-subtitle {color: #667085; font-size: 0.97rem; margin: 0.35rem 0 1.4rem 0; max-width: 760px;}
+.ms-eyebrow {font-size: 0.74rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #0E7A5C; margin-bottom: 0.3rem;}
+.ms-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.85rem; font-weight: 700;
+    letter-spacing: -0.02em; color: #20354A; margin: 0; line-height: 1.22;}
+.ms-subtitle {color: #6B7A8C; font-size: 0.98rem; margin: 0.4rem 0 1.5rem 0; max-width: 780px; line-height: 1.55;}
+
+/* welcome banner */
+.ms-welcome {display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
+    background: #FFFFFF; border: 1px solid #E8EEF3; border-radius: 16px; padding: 1.35rem 1.5rem;
+    margin-bottom: 1.25rem; box-shadow: 0 1px 2px rgba(32, 53, 74, 0.04);}
+.ms-welcome-left {display: flex; align-items: center; gap: 1rem;}
+.ms-welcome-mark {width: 48px; height: 48px; border-radius: 14px; background: #ECFDF3; color: #0E7A5C;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
+.ms-welcome-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.25rem; font-weight: 700;
+    color: #20354A;}
+.ms-welcome-sub {color: #6B7A8C; font-size: 0.9rem; margin-top: 0.15rem;}
+.ms-welcome-chip {display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.8rem;
+    border-radius: 999px; background: #F6F9F8; border: 1px solid #E8EEF3; color: #3C4E63; font-size: 0.84rem;
+    font-weight: 500;}
 
 /* "why this alert" source sentence */
-.ms-quote {border-left: 3px solid #0E7A5C; background: #F6FEF9; padding: 0.55rem 0.8rem; border-radius: 0 8px 8px 0;
-    color: #344054; font-size: 0.86rem; margin: 0.3rem 0 0.4rem 0;}
+.ms-quote {border-left: 3px solid #65B8AD; background: #F3FAF9; padding: 0.6rem 0.85rem; border-radius: 0 10px 10px 0;
+    color: #3C4E63; font-size: 0.87rem; margin: 0.3rem 0 0.4rem 0; line-height: 1.5;}
 
 /* KPI cards */
-.ms-kpi {background: #FFFFFF; border: 1px solid #EAECF0; border-radius: 12px; padding: 1.05rem 1.15rem;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05); height: 100%;}
-.ms-kpi-top {display: flex; justify-content: space-between; align-items: flex-start;}
-.ms-kpi-label {color: #475467; font-size: 0.85rem; font-weight: 500;}
-.ms-kpi-icon {width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center;
-    justify-content: center; border: 1px solid #EAECF0; color: #475467; background: #FFFFFF;}
-.ms-kpi-icon.danger {color: #D92D20; background: #FEF3F2; border-color: #FECDCA;}
-.ms-kpi-icon.brand {color: #0E7A5C; background: #ECFDF3; border-color: #ABEFC6;}
-.ms-kpi-value {font-size: 1.85rem; font-weight: 700; color: #101828; letter-spacing: -0.02em;
-    margin-top: 0.35rem; font-variant-numeric: tabular-nums; line-height: 1.15;}
-.ms-kpi-note {color: #667085; font-size: 0.8rem; margin-top: 0.2rem;}
+.ms-kpi {background: #FFFFFF; border: 1px solid #E8EEF3; border-radius: 14px; padding: 1.1rem 1.2rem;
+    box-shadow: 0 1px 2px rgba(32, 53, 74, 0.04); height: 100%; transition: box-shadow 0.2s ease, transform 0.2s ease;}
+.ms-kpi:hover {box-shadow: 0 8px 20px rgba(32, 53, 74, 0.07); transform: translateY(-2px);}
+.ms-kpi-top {display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;}
+.ms-kpi-label {color: #5C6B7D; font-size: 0.84rem; font-weight: 500;}
+.ms-kpi-icon {width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; color: #6B7A8C; background: #F6F9F8; flex-shrink: 0;}
+.ms-kpi-icon.danger {color: #C25555; background: #FCF2F2;}
+.ms-kpi-icon.brand {color: #067647; background: #ECFDF3; box-shadow: inset 0 0 0 1px #ABEFC6;}
+.ms-kpi-icon.teal {color: #3F978B; background: #EFF8F6;}
+.ms-kpi-value {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.95rem; font-weight: 700;
+    color: #20354A; letter-spacing: -0.02em; margin-top: 0.4rem; font-variant-numeric: tabular-nums; line-height: 1.15;}
+.ms-kpi-note {color: #8A98A8; font-size: 0.8rem; margin-top: 0.25rem;}
 
 /* card headings inside containers */
-.ms-card-title {font-size: 1rem; font-weight: 600; color: #101828; margin: 0;}
-.ms-card-sub {font-size: 0.84rem; color: #667085; margin: 0.15rem 0 0.8rem 0;}
+.ms-card-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.02rem; font-weight: 650;
+    color: #20354A; margin: 0;}
+.ms-card-sub {font-size: 0.84rem; color: #7A8898; margin: 0.2rem 0 0.9rem 0; line-height: 1.5;}
 
 /* pills and chips */
-.ms-pill {display: inline-flex; align-items: center; gap: 0.38rem; padding: 0.12rem 0.55rem 0.12rem 0.45rem;
+.ms-pill {display: inline-flex; align-items: center; gap: 0.38rem; padding: 0.14rem 0.6rem 0.14rem 0.5rem;
     border-radius: 999px; font-size: 0.75rem; font-weight: 600; border: 1px solid; white-space: nowrap;}
 .ms-pill .dot {width: 6px; height: 6px; border-radius: 50%;}
-.ms-chip {display: inline-block; padding: 0.16rem 0.6rem; margin: 0 0.35rem 0.4rem 0; border-radius: 6px;
-    font-size: 0.82rem; background: #F9FAFB; color: #344054; border: 1px solid #EAECF0; font-weight: 500;}
-.ms-chip.warn {background: #FEF3F2; border-color: #FECDCA; color: #B42318;}
-.ms-muted {color: #98A2B3; font-size: 0.85rem;}
-.ms-label {font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase;
-    letter-spacing: 0.05em; margin: 0.9rem 0 0.4rem 0;}
+.ms-chip {display: inline-block; padding: 0.2rem 0.65rem; margin: 0 0.35rem 0.4rem 0; border-radius: 8px;
+    font-size: 0.82rem; background: #F6F9F8; color: #3C4E63; border: 1px solid #E8EEF3; font-weight: 500;}
+.ms-chip.warn {background: #FCF2F2; border-color: #F2D6D6; color: #A94444;}
+.ms-muted {color: #9AA8B6; font-size: 0.85rem;}
+.ms-label {font-size: 0.72rem; font-weight: 600; color: #7A8898; text-transform: uppercase;
+    letter-spacing: 0.07em; margin: 1rem 0 0.45rem 0;}
 
 /* alert list */
 .ms-alerts {display: flex; flex-direction: column;}
-.ms-alert {display: flex; gap: 0.8rem; padding: 0.8rem 0; border-top: 1px solid #F2F4F7;}
+.ms-alert {display: flex; gap: 0.8rem; padding: 0.85rem 0; border-top: 1px solid #F0F4F8;}
 .ms-alert:first-child {border-top: none; padding-top: 0.2rem;}
 .ms-alert-bar {width: 3px; border-radius: 3px; flex-shrink: 0;}
 .ms-alert-body {flex: 1; min-width: 0;}
 .ms-alert-head {display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;}
-.ms-alert-title {font-weight: 600; color: #101828; font-size: 0.92rem;}
-.ms-alert-msg {color: #475467; font-size: 0.88rem; margin-top: 0.2rem;}
-.ms-alert-meta {color: #98A2B3; font-size: 0.78rem; margin-top: 0.2rem;}
+.ms-alert-title {font-weight: 600; color: #20354A; font-size: 0.92rem;}
+.ms-alert-msg {color: #5C6B7D; font-size: 0.88rem; margin-top: 0.25rem;}
+.ms-alert-meta {color: #9AA8B6; font-size: 0.78rem; margin-top: 0.2rem;}
 
 /* simple tables */
-.ms-table {width: 100%; border-collapse: collapse; font-size: 0.88rem;}
-.ms-table th {text-align: left; font-weight: 500; color: #667085; font-size: 0.78rem; padding: 0.55rem 0.75rem;
-    background: #F9FAFB; border-bottom: 1px solid #EAECF0;}
-.ms-table td {padding: 0.7rem 0.75rem; border-bottom: 1px solid #F2F4F7; color: #344054; vertical-align: top;}
+.ms-table-wrap {border: 1px solid #E8EEF3; border-radius: 12px; overflow-x: auto; background: #FFFFFF;}
+.ms-table {width: 100%; border-collapse: collapse; font-size: 0.88rem; border: none; margin: 0;}
+.ms-table th, .ms-table td {border-left: none !important; border-right: none !important; border-top: none !important;}
+.ms-table th {text-align: left; font-weight: 600; color: #7A8898; font-size: 0.74rem; letter-spacing: 0.03em;
+    text-transform: uppercase; padding: 0.65rem 0.85rem; background: #F8FAFC; border-bottom: 1px solid #E8EEF3;
+    white-space: nowrap;}
+.ms-table td {padding: 0.75rem 0.85rem; border-bottom: 1px solid #F0F4F8; color: #516174; vertical-align: top;}
 .ms-table tr:last-child td {border-bottom: none;}
-.ms-table td.strong {color: #101828; font-weight: 500;}
+.ms-table td.strong {color: #20354A; font-weight: 500;}
 .ms-table td.num {font-variant-numeric: tabular-nums; white-space: nowrap;}
-.ms-table-wrap {border: 1px solid #EAECF0; border-radius: 10px; overflow: hidden; background: #FFFFFF;}
+.ms-table tbody tr {transition: background 0.12s ease;}
+.ms-table tbody tr:hover td {background: #F7FBF9;}
 
 /* profile */
-.ms-avatar {width: 44px; height: 44px; border-radius: 50%; background: #ECFDF3; color: #0E7A5C;
-    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem;
-    border: 1px solid #ABEFC6; flex-shrink: 0;}
-.ms-profile-head {display: flex; gap: 0.8rem; align-items: center;}
-.ms-profile-name {font-weight: 650; font-size: 1.1rem; color: #101828;}
-.ms-profile-meta {color: #667085; font-size: 0.85rem;}
-.ms-facts {display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.9rem;}
-.ms-fact {background: #F9FAFB; border: 1px solid #EAECF0; border-radius: 8px; padding: 0.55rem 0.75rem;}
-.ms-fact-k {font-size: 0.75rem; color: #667085;}
-.ms-fact-v {font-weight: 600; color: #101828; font-size: 0.92rem;}
-
-/* motion and interaction polish */
-.stVerticalBlock[class*="st-key-card_"] {transition: box-shadow 0.18s ease, transform 0.18s ease;}
-.stVerticalBlock[class*="st-key-card_"]:hover {box-shadow: 0 4px 14px rgba(16, 24, 40, 0.07);}
-.ms-kpi {transition: box-shadow 0.18s ease, transform 0.18s ease;}
-.ms-kpi:hover {box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08); transform: translateY(-1px);}
-.ms-table tbody tr {transition: background 0.12s ease;}
-.ms-table tbody tr:hover td {background: #F9FAFB;}
-.stButton button, .stFormSubmitButton button, [data-testid="stPageLink"] a {transition: all 0.15s ease;}
-.stButton button[kind="primary"]:hover, .stFormSubmitButton button[kind="primaryFormSubmit"]:hover {
-    box-shadow: 0 4px 12px rgba(14, 122, 92, 0.3); transform: translateY(-1px);}
-.stTabs [data-baseweb="tab-highlight"] {background: #0E7A5C; height: 2px;}
-::-webkit-scrollbar {width: 10px; height: 10px;}
-::-webkit-scrollbar-thumb {background: #D0D5DD; border-radius: 8px; border: 2px solid #F6F7F9;}
-::-webkit-scrollbar-thumb:hover {background: #98A2B3;}
-::-webkit-scrollbar-track {background: transparent;}
+.ms-avatar {width: 46px; height: 46px; border-radius: 50%; background: #ECFDF3; color: #067647;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+    border: 1px solid #ABEFC6;}
+.ms-profile-head {display: flex; gap: 0.85rem; align-items: center;}
+.ms-profile-name {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-weight: 700; font-size: 1.12rem; color: #20354A;}
+.ms-profile-meta {color: #7A8898; font-size: 0.85rem;}
+.ms-facts {display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 1rem;}
+.ms-fact {background: #F8FAFC; border: 1px solid #EDF2F6; border-radius: 10px; padding: 0.6rem 0.8rem;}
+.ms-fact-k {font-size: 0.74rem; color: #8A98A8;}
+.ms-fact-v {font-weight: 600; color: #20354A; font-size: 0.93rem;}
 
 /* empty states */
-.ms-empty {display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.6rem 1rem;}
-.ms-empty .ic {width: 48px; height: 48px; border-radius: 50%; background: #ECFDF3; color: #0E7A5C;
-    display: flex; align-items: center; justify-content: center; margin-bottom: 0.7rem;
-    box-shadow: 0 0 0 8px #F6FEF9;}
-.ms-empty b {color: #101828; font-size: 0.95rem;}
-.ms-empty span {color: #667085; font-size: 0.85rem; margin-top: 0.2rem; max-width: 260px;}
+.ms-empty {display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.8rem 1rem;}
+.ms-empty .ic {width: 50px; height: 50px; border-radius: 50%; background: #ECFDF3; color: #0E7A5C;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;}
+.ms-empty b {color: #20354A; font-size: 0.95rem;}
+.ms-empty span {color: #7A8898; font-size: 0.85rem; margin-top: 0.25rem; max-width: 280px;}
 
 /* bar list (ranked values) */
-.ms-bars {display: flex; flex-direction: column; gap: 0.55rem;}
+.ms-bars {display: flex; flex-direction: column; gap: 0.6rem;}
 .ms-bar-row {display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 0.8rem; align-items: center;}
-.ms-bar-name {font-size: 0.88rem; color: #101828; font-weight: 500; white-space: nowrap; overflow: hidden;
+.ms-bar-name {font-size: 0.88rem; color: #20354A; font-weight: 500; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis;}
-.ms-bar-val {font-size: 0.82rem; color: #475467; font-variant-numeric: tabular-nums; white-space: nowrap;}
-.ms-bar-val small {color: #98A2B3; margin-left: 0.35rem;}
-.ms-bar-track {grid-column: 1 / span 2; height: 6px; border-radius: 999px; background: #F2F4F7; overflow: hidden;}
-.ms-bar-fill {height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0E7A5C, #17B26A);}
+.ms-bar-val {font-size: 0.82rem; color: #516174; font-variant-numeric: tabular-nums; white-space: nowrap;}
+.ms-bar-val small {color: #9AA8B6; margin-left: 0.35rem;}
+.ms-bar-track {grid-column: 1 / span 2; height: 6px; border-radius: 999px; background: #EEF3F7; overflow: hidden;}
+.ms-bar-fill {height: 100%; border-radius: 999px; background: #0E7A5C;}
 
-/* risk pill */
-.ms-risk {display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.65rem; border-radius: 999px;
+/* risk pill and risk scale */
+.ms-risk {display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.22rem 0.7rem; border-radius: 999px;
     font-size: 0.78rem; font-weight: 600; border: 1px solid;}
+.ms-scale {padding: 0.15rem 0 0.4rem 0;}
+.ms-scale-head {display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;}
+.ms-scale-value {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.35rem; font-weight: 700;
+    color: #20354A; font-variant-numeric: tabular-nums;}
+.ms-scale-track {position: relative; display: grid; grid-template-columns: 33fr 33fr 34fr; gap: 3px;
+    margin-top: 0.45rem;}
+.ms-scale-track > div {height: 8px; border-radius: 999px;}
+.ms-scale-marker {position: absolute; top: -4px; width: 4px; height: 16px; border-radius: 3px; background: #20354A;
+    box-shadow: 0 0 0 2px #FFFFFF; transform: translateX(-50%);}
+.ms-scale-labels {display: grid; grid-template-columns: 33fr 33fr 34fr; font-size: 0.72rem; color: #9AA8B6;
+    margin-top: 0.3rem;}
+.ms-scale-labels span:nth-child(2) {text-align: center;} .ms-scale-labels span:last-child {text-align: right;}
+.ms-scale-note {font-size: 0.8rem; color: #7A8898; margin-top: 0.45rem; line-height: 1.45;}
+.ms-factors {display: grid; grid-template-columns: 1fr; gap: 0.4rem; margin-top: 0.3rem;}
+.ms-factor {display: flex; justify-content: space-between; gap: 0.5rem; background: #F8FAFC; border: 1px solid #EDF2F6;
+    border-radius: 9px; padding: 0.45rem 0.7rem; font-size: 0.82rem;}
+.ms-factor span {color: #7A8898;} .ms-factor b {color: #20354A; font-weight: 600;}
 
-/* sidebar system status */
-.ms-status {margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid #EAECF0;}
-.ms-status-title {font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: #98A2B3;
+/* sidebar system status and account */
+.ms-status {margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid #E8EEF3;}
+.ms-status-title {font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: #9AA8B6;
     font-weight: 600; margin-bottom: 0.45rem;}
-.ms-status-row {display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; color: #344054; padding: 0.18rem 0;}
-.ms-status-dot {width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(23, 178, 106, 0.15);}
-.ms-status-val {margin-left: auto; color: #667085; font-size: 0.8rem;}
-.ms-status-note {font-size: 0.76rem; color: #98A2B3; margin-top: 0.55rem; line-height: 1.4;}
+.ms-status-row {display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; color: #3C4E63; padding: 0.18rem 0;}
+.ms-status-dot {width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(79, 174, 138, 0.16);}
+.ms-status-val {margin-left: auto; color: #7A8898; font-size: 0.8rem;}
+.ms-status-note {font-size: 0.76rem; color: #9AA8B6; margin-top: 0.55rem; line-height: 1.45;}
+.ms-account {display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 0.75rem; border: 1px solid #E8EEF3;
+    border-radius: 12px; background: #F8FAFC; margin-bottom: 0.5rem;}
+.ms-account .ms-avatar {width: 36px; height: 36px; font-size: 0.85rem;}
+.ms-account-name {font-weight: 600; color: #20354A; font-size: 0.9rem; line-height: 1.2;}
+.ms-account-meta {color: #7A8898; font-size: 0.78rem;}
 
-/* sidebar account */
-.ms-account {display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 0.75rem; border: 1px solid #EAECF0;
-    border-radius: 10px; background: #F9FAFB; margin-bottom: 0.5rem;}
-.ms-account .ms-avatar {width: 34px; height: 34px; font-size: 0.85rem;}
-.ms-account-name {font-weight: 600; color: #101828; font-size: 0.9rem; line-height: 1.2;}
-.ms-account-meta {color: #667085; font-size: 0.78rem;}
+/* responsive */
+@media (max-width: 900px) {
+    .block-container {padding-top: 1.6rem;}
+    .ms-title {font-size: 1.55rem;}
+    .ms-kpi-value {font-size: 1.6rem;}
+}
+@media (max-width: 640px) {
+    .block-container {padding-left: 1rem; padding-right: 1rem;}
+    .ms-facts, .ms-factors {grid-template-columns: 1fr;}
+    .ms-welcome {padding: 1.1rem;}
+    .ms-table {font-size: 0.82rem;}
+}
+@media (prefers-reduced-motion: reduce) {
+    .block-container, .ms-kpi, .stVerticalBlock[class*="st-key-card_"] {animation: none; transition: none;}
+}
 </style>
 """
 
@@ -213,37 +281,33 @@ _LOGIN_CSS = """
 <style>
 section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {display: none;}
 [data-testid="stForm"] {background: transparent; box-shadow: none; padding: 0;}
-.block-container {max-width: 1180px; padding-top: 2.2rem;}
-.ms-hero {position: relative; overflow: hidden; border-radius: 18px; padding: 2.4rem 2.4rem 2rem 2.4rem;
-    min-height: 600px; color: #FFFFFF; display: flex; flex-direction: column;
-    background: radial-gradient(120% 90% at 0% 0%, #0E7A5C 0%, rgba(14, 122, 92, 0) 55%),
-                radial-gradient(90% 70% at 100% 100%, #134E48 0%, rgba(19, 78, 72, 0) 60%), #0B1424;}
-.ms-hero::before {content: ""; position: absolute; inset: 0; pointer-events: none;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1px);
-    background-size: 22px 22px; mask-image: linear-gradient(180deg, rgba(0,0,0,0.9), transparent 70%);}
-.ms-hero > * {position: relative;}
-.ms-hero-brand {display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.05rem;}
-.ms-hero-mark {width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center;}
-.ms-hero h1 {color: #FFFFFF; font-size: 2.3rem; line-height: 1.15; letter-spacing: -0.03em; font-weight: 700;
-    margin: 3.2rem 0 0.9rem 0;}
-.ms-hero p.lead {color: rgba(255, 255, 255, 0.72); font-size: 1.02rem; max-width: 460px; margin: 0;}
-.ms-hero-list {margin-top: 2.2rem; display: flex; flex-direction: column; gap: 1.05rem;}
-.ms-hero-item {display: flex; gap: 0.8rem; align-items: flex-start;}
-.ms-hero-item .ic {width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14); display: flex; align-items: center; justify-content: center;
-    color: #6CE9A6; flex-shrink: 0;}
-.ms-hero-item b {color: #FFFFFF; font-weight: 600; font-size: 0.95rem;}
-.ms-hero-item span {color: rgba(255, 255, 255, 0.65); font-size: 0.88rem;}
-.ms-hero-foot {margin-top: auto; padding-top: 2rem; color: rgba(255, 255, 255, 0.5); font-size: 0.78rem;}
-.ms-signin-title {font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; color: #101828; margin: 0;}
-.ms-signin-sub {color: #667085; margin: 0.35rem 0 1.4rem 0;}
-.ms-roles {margin-top: 1.4rem; border: 1px solid #EAECF0; border-radius: 10px; background: #FFFFFF;}
-.ms-role {display: flex; justify-content: space-between; gap: 1rem; padding: 0.6rem 0.85rem;
-    border-top: 1px solid #F2F4F7; font-size: 0.85rem;}
+.block-container {max-width: 1180px; padding-top: 2.6rem;}
+.ms-hero {position: relative; border-radius: 22px; padding: 2.6rem 2.6rem 2.4rem 2.6rem; min-height: 560px;
+    display: flex; flex-direction: column; background: #F6F9F8; border: 1px solid #E8EEF3;}
+.ms-hero-brand {display: flex; align-items: center; gap: 0.65rem; font-weight: 700; font-size: 1.08rem; color: #20354A;
+    font-family: "Plus Jakarta Sans", Inter, sans-serif;}
+.ms-hero-mark {width: 38px; height: 38px; border-radius: 11px; background: #0E7A5C; display: flex;
+    align-items: center; justify-content: center;}
+.ms-hero h1 {font-family: "Plus Jakarta Sans", Inter, sans-serif; color: #20354A; font-size: 2.35rem;
+    line-height: 1.15; letter-spacing: -0.03em; font-weight: 750; margin: 3rem 0 0.9rem 0;}
+.ms-hero h1 em {font-style: normal; color: #0E7A5C;}
+.ms-hero p.lead {color: #5C6B7D; font-size: 1.02rem; max-width: 470px; margin: 0; line-height: 1.6;}
+.ms-hero-list {margin-top: 2.2rem; display: flex; flex-direction: column; gap: 1.1rem;}
+.ms-hero-item {display: flex; gap: 0.85rem; align-items: flex-start;}
+.ms-hero-item .ic {width: 38px; height: 38px; border-radius: 11px; background: #FFFFFF; border: 1px solid #E3EBF2;
+    display: flex; align-items: center; justify-content: center; color: #0E7A5C; flex-shrink: 0;}
+.ms-hero-item b {color: #20354A; font-weight: 600; font-size: 0.95rem;}
+.ms-hero-item span {color: #6B7A8C; font-size: 0.88rem; line-height: 1.5;}
+.ms-signin-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.7rem; font-weight: 700;
+    letter-spacing: -0.02em; color: #20354A; margin: 0;}
+.ms-signin-sub {color: #6B7A8C; margin: 0.4rem 0 1.5rem 0;}
+.ms-roles {margin-top: 1.5rem; border: 1px solid #E8EEF3; border-radius: 12px; background: #FFFFFF;}
+.ms-role {display: flex; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.9rem;
+    border-top: 1px solid #F0F4F8; font-size: 0.85rem;}
 .ms-role:first-child {border-top: none;}
-.ms-role code {background: #F2F4F7; color: #101828; padding: 0.05rem 0.4rem; border-radius: 5px; font-size: 0.8rem;}
-.ms-role span {color: #667085; text-align: right;}
+.ms-role code {background: #F6F9F8; color: #0B6B50; padding: 0.08rem 0.45rem; border-radius: 6px; font-size: 0.8rem;}
+.ms-role span {color: #7A8898; text-align: right;}
+@media (max-width: 900px) {.ms-hero {min-height: auto; padding: 1.6rem;} .ms-hero h1 {font-size: 1.7rem; margin-top: 1.4rem;} .ms-hero-list {display: none;}}
 </style>
 """
 
@@ -262,6 +326,15 @@ def page_header(title, subtitle="", eyebrow=""):
     st.markdown(f'{eyebrow_html}<h1 class="ms-title">{escape(title)}</h1>{sub_html}', unsafe_allow_html=True)
 
 
+def welcome(title, subtitle, chip_text, icon_name="heart"):
+    """A calm welcome banner for the top of the dashboard."""
+    st.markdown(
+        f'<div class="ms-welcome"><div class="ms-welcome-left"><div class="ms-welcome-mark">{icon(icon_name, 22)}</div>'
+        f'<div><div class="ms-welcome-title">{escape(title)}</div><div class="ms-welcome-sub">{escape(subtitle)}</div>'
+        f'</div></div><div class="ms-welcome-chip">{icon("shield", 15)}{escape(chip_text)}</div></div>',
+        unsafe_allow_html=True)
+
+
 def card_title(title, subtitle=""):
     sub = f'<div class="ms-card-sub">{escape(subtitle)}</div>' if subtitle else '<div style="height:0.6rem"></div>'
     st.markdown(f'<div class="ms-card-title">{escape(title)}</div>{sub}', unsafe_allow_html=True)
@@ -272,9 +345,9 @@ def label(text):
 
 
 def kpi(label_text, value, note="", icon_name=None, tone=""):
-    """A headline number card. tone: '' | 'danger' | 'brand' (tints the icon only)."""
+    """A headline number card. tone: '' | 'danger' | 'brand' | 'teal' (tints the icon only)."""
     value_text = f"{value:,}" if isinstance(value, int) else escape(str(value))
-    icon_html = f'<div class="ms-kpi-icon {tone}">{icon(icon_name, 17)}</div>' if icon_name else ""
+    icon_html = f'<div class="ms-kpi-icon {tone}">{icon(icon_name, 18)}</div>' if icon_name else ""
     note_html = f'<div class="ms-kpi-note">{escape(note)}</div>' if note else ""
     st.markdown(f'<div class="ms-kpi"><div class="ms-kpi-top"><div class="ms-kpi-label">{escape(label_text)}'
                 f'</div>{icon_html}</div><div class="ms-kpi-value">{value_text}</div>{note_html}</div>',
@@ -284,15 +357,24 @@ def kpi(label_text, value, note="", icon_name=None, tone=""):
 def severity_pill(severity):
     s = SEVERITY_STYLE.get((severity or "").upper())
     if s is None:
-        return f'<span class="ms-pill" style="background:#F9FAFB;color:#344054;border-color:#EAECF0">' \
+        return f'<span class="ms-pill" style="background:#F6F9F8;color:#516174;border-color:#E8EEF3">' \
                f'{escape(severity or "-")}</span>'
     return (f'<span class="ms-pill" style="background:{s["bg"]};color:{s["text"]};border-color:{s["border"]}">'
             f'<span class="dot" style="background:{s["color"]}"></span>{s["label"]}</span>')
 
 
-def neutral_pill(text, color="#344054", bg="#F9FAFB", border="#EAECF0"):
+def neutral_pill(text, color="#516174", bg="#F6F9F8", border="#E8EEF3"):
     return (f'<span class="ms-pill" style="background:{bg};color:{color};border-color:{border}">'
             f'{escape(str(text))}</span>')
+
+
+def success_pill(text):
+    return neutral_pill(text, SUCCESS["text"], SUCCESS["bg"], SUCCESS["border"])
+
+
+def alert_pill(text):
+    s = SEVERITY_STYLE["MAJOR"]
+    return neutral_pill(text, s["text"], s["bg"], s["border"])
 
 
 def alert_list(alerts, meta=None):
@@ -300,7 +382,7 @@ def alert_list(alerts, meta=None):
     rows = []
     for a in alerts:
         sev = (a.get("severity") or "").upper()
-        color = SEVERITY_STYLE.get(sev, {}).get("color", "#D0D5DD")
+        color = SEVERITY_STYLE.get(sev, {}).get("color", "#D5DEE7")
         kind = ALERT_TYPE_LABEL.get(a.get("alert_type"), a.get("alert_type") or "Alert")
         meta_text = meta(a) if meta else ""
         meta_html = f'<div class="ms-alert-meta">{escape(meta_text)}</div>' if meta_text else ""
@@ -313,31 +395,49 @@ def alert_list(alerts, meta=None):
     st.markdown(f'<div class="ms-alerts">{"".join(rows)}</div>', unsafe_allow_html=True)
 
 
-def risk_meter(score):
-    """Show a model score with an accessible percentage and a named band."""
+RISK_BANDS = (("Low", "MINOR", 0.33), ("Medium", "MODERATE", 0.66), ("High", "MAJOR", 1.01))
+
+
+def risk_band(score):
+    return next((name, sev) for name, sev, upper in RISK_BANDS if score < upper)
+
+
+def risk_meter(score, explain=False):
+    """The model's risk score on a calm Low / Medium / High scale with a marker; never colour alone."""
     if score is None:
-        st.caption("Not scored yet")
+        st.markdown('<span class="ms-muted">Not scored yet</span>', unsafe_allow_html=True)
         return
-    score = float(score)
-    if score < 0.33:
-        label, severity = "Low", "MINOR"
-    elif score < 0.66:
-        label, severity = "Medium", "MODERATE"
-    else:
-        label, severity = "High", "MAJOR"
-    color = SEVERITY_STYLE[severity]["color"]
-    percentage = f"{score:.1%}"
+    score = min(max(float(score), 0.0), 1.0)
+    name, sev = risk_band(score)
+    style = SEVERITY_STYLE[sev]
+    zones = "".join(f'<div style="background:{SEVERITY_STYLE[s]["border"]}"></div>' for _, s, _ in RISK_BANDS)
+    note = ('<div class="ms-scale-note">Estimated probability that an adverse event like this is reported as '
+            'serious, from a model trained on openFDA reports. A decision aid, not a diagnosis.</div>'
+            if explain else "")
     st.markdown(
-        f'<div style="display:grid;gap:0.32rem;padding:0.2rem 0 0.55rem">'
-        f'<span style="color:{color};font-size:0.85rem;font-weight:650">'
-        f'{label} · {percentage}</span>'
-        f'<div role="meter" aria-label="{label} model score" aria-valuemin="0" '
-        f'aria-valuemax="100" aria-valuenow="{score * 100:.1f}" '
-        f'aria-valuetext="{label} {percentage}" '
-        f'style="height:0.42rem;border-radius:1rem;background:#E2E8F0;overflow:hidden">'
-        f'<div style="height:100%;width:{percentage};background:{color}"></div></div></div>',
-        unsafe_allow_html=True,
-    )
+        f'<div class="ms-scale" role="meter" aria-label="{name} model risk" aria-valuemin="0" aria-valuemax="100" '
+        f'aria-valuenow="{score * 100:.0f}" aria-valuetext="{name}, {score:.0%}">'
+        f'<div class="ms-scale-head"><span class="ms-scale-value">{score:.0%}</span>'
+        f'<span class="ms-pill" style="background:{style["bg"]};color:{style["text"]};border-color:{style["border"]}">'
+        f'<span class="dot" style="background:{style["color"]}"></span>{name} risk</span></div>'
+        f'<div class="ms-scale-track">{zones}<div class="ms-scale-marker" style="left:{score * 100:.1f}%"></div></div>'
+        f'<div class="ms-scale-labels"><span>Low</span><span>Medium</span><span>High</span></div>{note}</div>',
+        unsafe_allow_html=True)
+
+
+def risk_factors(features):
+    """The six model inputs for one alert, as read from the database (age, sex, medicines, interactions, signals)."""
+    if not features:
+        return
+    age, sex, n_drugs, max_sev, n_inter, has_signal = features
+    sexes = {0: "Male", 1: "Female"}
+    sev_names = {0: "None", 1: "Minor", 2: "Moderate", 3: "Major"}
+    items = [("Age", f"{age:.0f} years"), ("Sex", sexes.get(int(sex), "Other")),
+             ("Active medicines", f"{int(n_drugs)}"), ("Strongest interaction", sev_names.get(int(max_sev), "-")),
+             ("Interacting pairs", f"{int(n_inter)}"), ("Known safety signal", "Yes" if has_signal else "No")]
+    st.markdown('<div class="ms-factors">' + "".join(
+        f'<div class="ms-factor"><span>{escape(k)}</span><b>{escape(v)}</b></div>' for k, v in items) + "</div>",
+        unsafe_allow_html=True)
 
 
 def chips(items, warn=False, empty="None recorded"):
@@ -394,12 +494,13 @@ def bar_list(rows):
 def risk_pill(alerts):
     """Patient risk from their active alerts: High (any major), Watch (moderate/minor), Clear."""
     severities = {a["severity"] for a in alerts}
+    count = f"{len(alerts)} active alert" + ("s" if len(alerts) != 1 else "")
     if "MAJOR" in severities:
-        s, label = SEVERITY_STYLE["MAJOR"], f"High risk · {len(alerts)} active alert" + ("s" if len(alerts) != 1 else "")
+        s, text = SEVERITY_STYLE["MAJOR"], f"Needs review · {count}"
     elif severities:
-        s, label = SEVERITY_STYLE["MODERATE"], f"Watch · {len(alerts)} active alert" + ("s" if len(alerts) != 1 else "")
+        s, text = SEVERITY_STYLE["MODERATE"], f"Watch · {count}"
     else:
-        s, label = {"bg": "#ECFDF3", "text": "#067647", "border": "#ABEFC6", "color": "#17B26A"}, "No active alerts"
+        s, text = SUCCESS, "No active alerts"
     return (f'<span class="ms-risk" style="background:{s["bg"]};color:{s["text"]};border-color:{s["border"]}">'
             f'<span class="dot" style="width:6px;height:6px;border-radius:50%;background:{s["color"]}"></span>'
-            f'{label}</span>')
+            f'{text}</span>')

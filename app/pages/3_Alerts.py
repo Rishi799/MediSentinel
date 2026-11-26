@@ -8,6 +8,7 @@ from psycopg import errors as pg_errors
 
 from app import session, ui
 from app.explain import explain_alert
+from ml.score import alert_inputs
 from medisentinel import db
 
 conn = session.require_login()
@@ -79,7 +80,11 @@ with tab_active:
                 detail = explain_alert(conn, alert["alert_id"])
                 if detail:
                     ui.label("Model risk score")
-                    ui.risk_meter(detail["score"])
+                    ui.risk_meter(detail["score"], explain=True)
+                    inputs = alert_inputs(conn, [alert["alert_id"]])
+                    if inputs:
+                        ui.label("What the model looked at")
+                        ui.risk_factors(inputs[0]["features"])
                     ui.label("Why this alert")
                     st.caption(detail["status"])
                     if detail.get("sentence"):

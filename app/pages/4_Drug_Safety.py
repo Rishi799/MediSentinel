@@ -40,10 +40,10 @@ def bar_chart(rows, label, height=300):
         .mark_bar(color=ui.BRAND, cornerRadiusEnd=4, height=16)
         .encode(
             y=alt.Y(f"{label}:N", sort="-x", title=None,
-                    axis=alt.Axis(labelLimit=200, labelFontSize=12, labelColor="#344054", ticks=False, domain=False,
+                    axis=alt.Axis(labelLimit=200, labelFontSize=12, labelColor="#3C4E63", ticks=False, domain=False,
                                   labelPadding=8, minExtent=170)),
             x=alt.X("Reports:Q", title=None,
-                    axis=alt.Axis(gridColor="#F2F4F7", labelColor="#98A2B3", domain=False, ticks=False,
+                    axis=alt.Axis(gridColor="#EEF3F7", labelColor="#8A98A8", domain=False, ticks=False,
                                   tickMinStep=1)),
             tooltip=[alt.Tooltip(f"{label}:N"), alt.Tooltip("Reports:Q", format=",")],
         )
@@ -74,7 +74,8 @@ with k1:
 with k2:
     ui.kpi("Adverse-event reports", counts["reports"], "openFDA FAERS · MongoDB", "activity")
 with k3:
-    ui.kpi("Safety signals", len(signals), "PRR / ROR · PostgreSQL", "alert")
+    signal_total = conn.execute("SELECT count(*) AS n FROM Adverse_Signal WHERE prr >= 2").fetchone()["n"]
+    ui.kpi("Safety signals", signal_total, "PRR ≥ 2 · PostgreSQL", "alert")
 
 st.write("")
 c1, c2 = st.columns(2, gap="medium")
@@ -130,7 +131,7 @@ with st.container(border=True, key="card_4"):
     else:
         rows = [{"medication": s["medication"], "reaction": s["reaction_term"].capitalize(),
                  "reports": f"{s['report_count']:,}", "prr": f"{s['prr']:.2f}", "ror": f"{s['ror']:.2f}",
-                 "flag": ui.neutral_pill("Signal", "#B42318", "#FEF3F2", "#FECDCA")
+                 "flag": ui.neutral_pill("Signal", "#A94444", "#FCF2F2", "#F2D6D6")
                  if s["prr"] and s["prr"] >= 2 and (s["report_count"] or 0) >= 3
                  else ui.neutral_pill("Below threshold")} for s in signals]
         ui.table(rows, [("medication", "Medicine", "strong"), ("reaction", "Reaction", ""),

@@ -14,7 +14,7 @@ ui.page_header("Analytics", "Rules learned from FDA labels, model risk scores, a
 SEVERITIES = ["MAJOR", "MODERATE", "MINOR"]
 SEVERITY_LABELS = [ui.SEVERITY_STYLE[s]["label"] for s in SEVERITIES]
 SEVERITY_SCALE = alt.Scale(domain=SEVERITY_LABELS, range=[ui.SEVERITY_STYLE[s]["color"] for s in SEVERITIES])
-GRID, LABEL, MUTED = "#F2F4F7", "#344054", "#98A2B3"
+GRID, LABEL, MUTED = "#EEF3F7", "#3C4E63", "#8A98A8"
 
 
 def styled(chart, height=240):
@@ -24,7 +24,7 @@ def styled(chart, height=240):
                        autosize=alt.AutoSizeParams(type="fit", contains="padding"))
             .configure_axis(labelColor=MUTED, titleColor=MUTED, titleFontWeight=500, titleFontSize=11,
                             gridColor=GRID, domain=False, ticks=False, labelPadding=6)
-            .configure_legend(orient="top", title=None, labelColor="#475467", symbolType="circle", symbolSize=70)
+            .configure_legend(orient="top", title=None, labelColor="#5C6B7D", symbolType="circle", symbolSize=70)
             .configure_view(stroke=None))
 
 
@@ -130,11 +130,11 @@ with left:
                 y=alt.Y("prr:Q", title="PRR", scale=alt.Scale(type="log"), axis=alt.Axis(format="~s", minExtent=34)),
                 size=alt.Size("reports:Q", legend=None, scale=alt.Scale(range=[30, 260])),
                 color=alt.Color("Status:N", scale=alt.Scale(domain=["Signal (PRR ≥ 2)", "Below threshold"],
-                                                            range=[ui.BRAND, "#98A2B3"])),
+                                                            range=[ui.BRAND, "#8A98A8"])),
                 tooltip=[alt.Tooltip("medicine:N", title="Medicine"), alt.Tooltip("reaction:N", title="Reaction"),
                          alt.Tooltip("reports:Q", title="Reports"), alt.Tooltip("prr:Q", title="PRR", format=".2f")],
             )
-            threshold = alt.Chart(pd.DataFrame({"y": [2]})).mark_rule(strokeDash=[5, 4], color="#667085").encode(
+            threshold = alt.Chart(pd.DataFrame({"y": [2]})).mark_rule(strokeDash=[5, 4], color="#7A8898").encode(
                 y="y:Q")
             st.altair_chart(styled(points + threshold, 300), width="stretch", theme=None)
 with right:

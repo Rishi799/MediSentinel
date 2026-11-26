@@ -1,6 +1,6 @@
 """Dashboard: headline numbers, 14-day activity, alerts by type, medicines raising alerts, latest activity."""
 
-from datetime import date
+from datetime import date, datetime
 
 import altair as alt
 import pandas as pd
@@ -12,10 +12,13 @@ from medisentinel import db
 conn = session.require_login()
 role = session.get_role()
 
-ui.page_header("Dashboard", f"{date.today():%A, %d %B %Y} · Live view of prescriptions and the safety alerts "
-                            "the database raised for them.", eyebrow="Overview")
-
 counts = db.dashboard_counts(conn)
+hour = datetime.now().hour
+greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+ui.welcome(f"{greeting}, {ui.ROLE_LABEL.get(role, 'there')}",
+           f"{date.today():%A, %d %B %Y} · {counts['active_alerts']:,} active safety alerts across "
+           f"{counts['patients']:,} patients.",
+           "Every prescription is checked by the database")
 activity = db.daily_activity(conn, days=30)
 month_rx = sum(d["prescriptions"] for d in activity)
 month_alerts = sum(d["alerts"] for d in activity)
@@ -27,14 +30,14 @@ c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     ui.kpi("Patients", counts["patients"], "Registered profiles", "users", "brand")
 with c2:
-    ui.kpi("Prescriptions", counts["prescriptions"], f"Written by {counts['doctors']} doctors", "file")
+    ui.kpi("Prescriptions", counts["prescriptions"], f"Written by {counts['doctors']} doctors", "file", "teal")
 with c3:
     ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major · awaiting review",
            "alert", "danger")
 with c4:
     ui.kpi("High-risk alerts", high_risk, "Model risk score ≥ 66%", "activity", "danger")
 with c5:
-    ui.kpi("Overrides", counts["overridden_alerts"], "Each with a recorded reason", "history")
+    ui.kpi("Overrides", counts["overridden_alerts"], "With a recorded reason", "history")
 
 st.write("")
 left, right = st.columns([1.35, 1], gap="medium")
@@ -47,13 +50,13 @@ with left:
         long = df.melt(id_vars="day", value_vars=["prescriptions", "alerts"], var_name="series", value_name="count")
         long["series"] = long["series"].map({"prescriptions": "Prescriptions", "alerts": "Alerts"})
         base = alt.Chart(long).encode(
-            x=alt.X("day:T", title=None, axis=alt.Axis(format="%d %b", labelColor="#98A2B3", grid=False, ticks=False,
+            x=alt.X("day:T", title=None, axis=alt.Axis(format="%d %b", labelColor="#8A98A8", grid=False, ticks=False,
                                                       domain=False, tickCount=8, labelPadding=8)),
-            y=alt.Y("count:Q", title=None, axis=alt.Axis(gridColor="#F2F4F7", labelColor="#98A2B3", domain=False,
+            y=alt.Y("count:Q", title=None, axis=alt.Axis(gridColor="#EEF3F7", labelColor="#8A98A8", domain=False,
                                                         ticks=False, tickMinStep=1, format="d", minExtent=34)),
             color=alt.Color("series:N", scale=alt.Scale(domain=["Prescriptions", "Alerts"],
                                                         range=[ui.BRAND, ui.SEVERITY_STYLE["MAJOR"]["color"]]),
-                            legend=alt.Legend(orient="top", title=None, labelColor="#475467", symbolType="circle",
+                            legend=alt.Legend(orient="top", title=None, labelColor="#5C6B7D", symbolType="circle",
                                               symbolSize=70, symbolOpacity=1)),
         )
         area = base.mark_area(opacity=0.08, interpolate="monotone")
@@ -62,7 +65,7 @@ with left:
             tooltip=[alt.Tooltip("day:T", title="Day", format="%d %b"), alt.Tooltip("series:N", title="Series"),
                      alt.Tooltip("count:Q", title="Count")])
         chart = (
-            (area + line + points).properties(height=235)
+            (area + line + points).properties(height=330)
             .configure_view(stroke=None)
             .configure(font="Inter", background="#FFFFFF", padding={"left": 8, "right": 12, "top": 4, "bottom": 4},
                        autosize=alt.AutoSizeParams(type="fit", contains="padding"))
@@ -100,15 +103,15 @@ with left2:
                 .mark_bar(cornerRadiusEnd=4, stroke="#FFFFFF", strokeWidth=2, height=28)
                 .encode(
                     y=alt.Y("Type:N", title=None, sort="-x",
-                            axis=alt.Axis(labelFontSize=12, labelColor="#344054", labelLimit=180, ticks=False,
+                            axis=alt.Axis(labelFontSize=12, labelColor="#3C4E63", labelLimit=180, ticks=False,
                                           domain=False, labelPadding=8, minExtent=130)),
                     x=alt.X("sum(n):Q", title=None,
-                            axis=alt.Axis(tickMinStep=1, gridColor="#F2F4F7", labelColor="#98A2B3", domain=False,
+                            axis=alt.Axis(tickMinStep=1, gridColor="#EEF3F7", labelColor="#8A98A8", domain=False,
                                           ticks=False)),
                     color=alt.Color("Severity:N", sort=order,
                                     scale=alt.Scale(domain=order,
                                                     range=[ui.SEVERITY_STYLE[s.upper()]["color"] for s in order]),
-                                    legend=alt.Legend(orient="top", title=None, labelColor="#475467",
+                                    legend=alt.Legend(orient="top", title=None, labelColor="#5C6B7D",
                                                       symbolType="circle", symbolSize=70)),
                     order=alt.Order("rank:Q"),
                     tooltip=[alt.Tooltip("Type:N"), alt.Tooltip("Severity:N"), alt.Tooltip("n:Q", title="Alerts")],
@@ -143,8 +146,8 @@ with st.container(border=True, key="card_5"):
             r["rx"] = f"RX-{r['prescription_id']:05d}"
             r["date"] = f"{r['prescribed_date']:%d %b %Y}"
             r["alert_pill"] = (ui.neutral_pill(f"{r['alerts']} alert" + ("s" if r["alerts"] != 1 else ""),
-                                               "#B42318", "#FEF3F2", "#FECDCA") if r["alerts"]
-                               else ui.neutral_pill("Clear", "#067647", "#ECFDF3", "#ABEFC6"))
+                                               "#A94444", "#FCF2F2", "#F2D6D6") if r["alerts"]
+                               else ui.neutral_pill("Clear", "#2F7A5E", "#EFF8F4", "#CDE9DD"))
         ui.table(recent, [("rx", "Prescription", "strong"), ("date", "Date", "num"), ("patient", "Patient", ""),
                           ("doctor", "Doctor", ""), ("medicines", "Medicines", ""),
                           ("alert_pill", "Safety", "html")])

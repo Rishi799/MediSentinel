@@ -26,8 +26,8 @@ def show_history():
         r["rx"] = f"RX-{r['prescription_id']:05d}"
         r["date"] = f"{r['prescribed_date']:%d %b %Y}"
         r["alert_pill"] = (ui.neutral_pill(f"{r['alerts']} alert" + ("s" if r["alerts"] != 1 else ""),
-                                           "#B42318", "#FEF3F2", "#FECDCA") if r["alerts"]
-                           else ui.neutral_pill("Clear", "#067647", "#ECFDF3", "#ABEFC6"))
+                                           "#A94444", "#FCF2F2", "#F2D6D6") if r["alerts"]
+                           else ui.neutral_pill("Clear", "#2F7A5E", "#EFF8F4", "#CDE9DD"))
         r["status_pill"] = ui.neutral_pill((r["status"] or "").capitalize())
     ui.table(recent, [("rx", "Prescription", "strong"), ("date", "Date", "num"), ("patient", "Patient", ""),
                       ("doctor", "Doctor", ""), ("medicines", "Medicines", ""), ("alert_pill", "Safety", "html"),
@@ -77,13 +77,16 @@ if session.can_write():
 
             with form_col:
                 with st.container(border=True, key="card_1"):
-                    ui.card_title("Prescription", "Add a row per medicine. Rows can be added and removed in the "
-                                                  "table.")
+                    ui.card_title("New prescription", "Three steps: choose the patient, add the medicines, then check "
+                                                      "and save.")
+                    ui.label("1 · Patient and prescriber")
                     p1, p2 = st.columns(2)
                     patient_label = p1.selectbox("Patient", options=patient_labels, key="rx_patient")
                     doctor_label = p2.selectbox("Prescribing doctor", options=list(doctor_options.keys()))
                     patient_id = patient_options[patient_label]
 
+                    ui.label("2 · Medicines")
+                    st.caption(f"One row per medicine. Dose is a number and a unit ({', '.join(constants.DOSE_UNITS)}).")
                     edited = st.data_editor(
                         empty_items(), key=f"rx_items_{st.session_state['rx_editor_version']}",
                         num_rows="dynamic", hide_index=True, width="stretch",
@@ -101,8 +104,9 @@ if session.can_write():
                     items = [{"med_id": med_options.get(r.get("Medicine")), "dose": (r.get("Dose") or "").strip(),
                               "frequency": r.get("Frequency")} for r in rows]
 
+                    ui.label("3 · Check and save")
                     save = st.button("Check and save prescription", type="primary", icon=":material/verified_user:",
-                                     disabled=not rows)
+                                     disabled=not rows, width="stretch")
 
             profile = db.patient_profile(conn, patient_id)
             preview = sorted(db.preview_conflicts(conn, patient_id, [i["med_id"] for i in items]),
