@@ -78,7 +78,10 @@ def login(username: str, password: str) -> tuple[bool, str | None]:
     # Close any existing active connection
     logout(rerun=False)
 
-    clean_user = username.strip() if username else ""
+    clean_user = username.strip().lower() if username else ""
+    if clean_user in ("doctor", "pharmacist", "admin"):
+        clean_user = "ms_" + clean_user  # short form of the role login
+    password = password.strip() if password else ""  # copied passwords often carry a space or newline
     if not clean_user or not password:
         return False, "Please enter both username and password."
 
@@ -117,7 +120,7 @@ def require_login():
     Returns the active database connection when logged in.
     """
     if not is_logged_in():
-        st.warning("You must be signed in to view this page.", icon=":material/lock:")
+        st.warning("Sign in to view this page.", icon=":material/lock:")
         st.stop()
     return st.session_state[SESSION_CONN]
 
@@ -139,17 +142,37 @@ def render_sidebar_status() -> None:
         return
     role = get_role()
     user = get_username()
-    role_icon = {"doctor": "🩺", "pharmacist": "💊", "admin": "⚙️"}.get(role or "", "👤")
-    access = "Read-only access" if role == "pharmacist" else "Read & write access"
+    title = {"doctor": "Doctor", "pharmacist": "Pharmacist", "admin": "Administrator"}.get(role or "", "User")
+    access = "Read-only" if role == "pharmacist" else "Read & write"
     with st.sidebar:
         st.markdown(
-            f'<div style="background:#13304D;border:1px solid #1E3A5F;border-radius:12px;'
-            f'padding:0.75rem 0.9rem;margin:0.4rem 0 0.6rem 0">'
-            f'<div style="font-size:0.72rem;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">'
-            f'Signed in</div>'
-            f'<div style="font-weight:700;color:#F8FAFC;margin-top:0.15rem">{role_icon} '
-            f'{escape((role or "user").capitalize())}</div>'
-            f'<div style="font-size:0.82rem;color:#CBD5E1">{escape(user or "")} · {access}</div></div>',
+            f'<div class="ms-account"><div class="ms-avatar">{escape(title[:2].upper())}</div>'
+            f'<div><div class="ms-account-name">{escape(title)}</div>'
+            f'<div class="ms-account-meta">{escape(user or "")} · {access}</div></div></div>',
             unsafe_allow_html=True)
-        if st.button("Log out", key="sidebar_logout_button", icon=":material/logout:", width="stretch"):
+        if st.button("Sign out", key="sidebar_logout_button", icon=":material/logout:", width="stretch"):
             logout()
+        pg_ok = not getattr(get_connection(), "closed", True)
+        mongo_ok = _mongo_reachable()
+        rows = [("PostgreSQL", pg_ok, "Connected" if pg_ok else "Offline"),
+                ("MongoDB", mongo_ok, "Connected" if mongo_ok else "Offline")]
+        status = "".join(
+            f'<div class="ms-status-row"><span class="ms-status-dot" style="background:{"#17B26A" if ok else "#F04438"}">'
+            f'</span>{name}<span class="ms-status-val">{text}</span></div>' for name, ok, text in rows)
+        st.markdown(f'<div class="ms-status"><div class="ms-status-title">System status</div>{status}'
+                    f'<div class="ms-status-note">Every prescription is checked by the database trigger; '
+                    f'permissions are enforced by PostgreSQL.</div></div>', unsafe_allow_html=True)
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _mongo_reachable() -> bool:
+    """Quick MongoDB ping for the status panel (cached for 30 s)."""
+    from pymongo import MongoClient
+    from medisentinel import config
+    try:
+        client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=800)
+        client.admin.command("ping")
+        client.close()
+        return True
+    except Exception:
+        return False
