@@ -1,5 +1,7 @@
 """Safety alerts: filter active alerts, override with a reason, and view the audit trail (Task C5)."""
 
+from html import escape
+
 import pandas as pd
 import streamlit as st
 from psycopg import errors as pg_errors
@@ -11,13 +13,8 @@ from medisentinel import db
 conn = session.require_login()
 is_doctor = session.get_role() == "doctor"
 
-<<<<<<< HEAD
 ui.page_header("Safety alerts", "Raised only by the database trigger. A doctor may override an alert with a "
                                 "clinical reason, which is kept permanently.", eyebrow="Clinical")
-=======
-ui.page_header("", "Safety alerts", "Raised only by the database trigger. Doctors may override one with a "
-                                     "clinical reason, which is kept as an audit trail.")
->>>>>>> origin/main
 
 flash = st.session_state.pop("alerts_flash", None)
 if flash:
@@ -74,12 +71,27 @@ with tab_active:
             picked = event.selection.rows
             alert = alerts[picked[0]] if picked else alerts[0]
 
-<<<<<<< HEAD
         with detail_col:
             with st.container(border=True, key="card_1"):
                 ui.card_title(f"Alert #{alert['alert_id']}", f"{alert['patient']} · raised "
                                                              f"{alert['created_at']:%d %b %Y, %H:%M}")
                 ui.alert_list([alert])
+                detail = explain_alert(conn, alert["alert_id"])
+                if detail:
+                    ui.label("Model risk score")
+                    ui.risk_meter(detail["score"])
+                    ui.label("Why this alert")
+                    st.caption(detail["status"])
+                    if detail.get("sentence"):
+                        st.markdown(f'<div class="ms-quote">{escape(detail["sentence"])}</div>',
+                                    unsafe_allow_html=True)
+                    elif detail.get("source_id"):
+                        st.caption("Matching sentence unavailable.")
+                    if detail.get("brand"):
+                        st.caption(f"Label: {detail['brand']}")
+                    if detail.get("source_id"):
+                        st.link_button(f"Source: openFDA label {detail['source_id']}", detail["url"],
+                                       icon=":material/open_in_new:")
                 if is_doctor:
                     ui.label("Override")
                     with st.form(f"override_{alert['alert_id']}", border=False, clear_on_submit=True):
@@ -105,56 +117,6 @@ with tab_active:
                     st.caption("The reason is stored permanently with the alert.")
                 else:
                     st.caption("Only doctors can override alerts.")
-=======
-        choices = {f"#{a['alert_id']} · {a['severity']} · {a['patient']} · {a['medication']}": a
-                   for a in alerts}
-        with st.container(border=True, key="card_1"):
-            selected = st.selectbox("Select an alert to inspect", options=list(choices), key="inspect_alert")
-            detail = explain_alert(conn, choices[selected]["alert_id"])
-            if detail:
-                st.markdown("##### Model score")
-                ui.risk_meter(detail["score"])
-                st.markdown("##### Why this alert")
-                st.text(detail["message"] or "")
-                st.caption(detail["status"])
-                if detail.get("sentence"):
-                    st.text(detail["sentence"], width="stretch")
-                elif detail.get("source_id"):
-                    st.caption("Matching sentence unavailable.")
-                if detail.get("brand"):
-                    st.text(detail["brand"])
-                if detail.get("source_id"):
-                    st.link_button(f"Source: openFDA label {detail['source_id']}", detail["url"],
-                                   icon=":material/open_in_new:")
-
-        if is_doctor:
-            with st.container(border=True, key="card_2"):
-                st.markdown("##### Override an alert")
-                st.caption("Only when the clinical benefit outweighs the risk. The reason is stored with the alert.")
-                with st.form("alert_override_form", border=False, clear_on_submit=True):
-                    chosen = st.selectbox("Alert *", options=list(choices.keys()))
-                    reason = st.text_area("Clinical reason *", max_chars=500,
-                                          placeholder="e.g. Short course under close INR monitoring; "
-                                                      "benefit outweighs risk.")
-                    submitted = st.form_submit_button("Override alert", type="primary", icon=":material/gavel:")
-                if submitted:
-                    alert = choices[chosen]
-                    if not reason or not reason.strip():
-                        st.error("A reason is required: an alert cannot be overridden without a clinical "
-                                 "justification.", icon=":material/error:")
-                    else:
-                        try:
-                            if db.override_alert(conn, alert["alert_id"], reason):
-                                st.session_state["alerts_flash"] = (
-                                    f"Alert #{alert['alert_id']} overridden. It is now in the audit trail.")
-                                st.rerun()
-                            else:
-                                st.warning(f"Alert #{alert['alert_id']} was already overridden.")
-                        except pg_errors.InsufficientPrivilege:
-                            st.error("Your role is not allowed to do this")
-        else:
-            st.caption("🔒 Only doctors can override alerts.")
->>>>>>> origin/main
 
 with tab_audit:
     trail = db.get_overridden_alerts(conn)
