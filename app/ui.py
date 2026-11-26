@@ -313,92 +313,65 @@ button[kind^="secondary"] p, button[kind^="tertiary"] p {color: inherit;}
 _LOGIN_CSS = """
 <style>
 section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {display: none;}
+header[data-testid="stHeader"] {background: transparent;}
 [data-testid="stForm"] {background: transparent; box-shadow: none; padding: 0; border: none;}
 .stApp {background:
-    radial-gradient(60% 50% at 12% 8%, rgba(52, 192, 143, 0.10) 0%, rgba(52, 192, 143, 0) 70%),
-    radial-gradient(50% 45% at 92% 90%, rgba(101, 184, 173, 0.10) 0%, rgba(101, 184, 173, 0) 70%), #F6F9F8;}
-.block-container {max-width: 1220px; padding-top: 2.2rem;}
+    radial-gradient(55% 60% at 22% 40%, rgba(52, 192, 143, 0.10) 0%, rgba(52, 192, 143, 0) 70%),
+    linear-gradient(#F6F9F8, #F6F9F8);}
+.stApp::before {content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(14, 122, 92, 0.13) 1px, transparent 1px); background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(70% 70% at 30% 45%, #000 0%, transparent 75%);
+    mask-image: radial-gradient(70% 70% at 30% 45%, #000 0%, transparent 75%);}
+.block-container {max-width: 1180px; padding-top: 5vh; position: relative; z-index: 1;}
 
-/* left: product story with a 3D scene */
-.ms-hero {position: relative; border-radius: 26px; padding: 2.3rem 2.4rem 2rem 2.4rem; overflow: hidden;
-    background: linear-gradient(160deg, #FFFFFF 0%, #F1FAF6 100%); border: 1px solid #E3EFEA;
-    box-shadow: 0 1px 2px rgba(16, 60, 45, 0.04), 0 24px 60px -28px rgba(16, 90, 66, 0.25);}
-.ms-hero::after {content: ""; position: absolute; right: -120px; top: -120px; width: 320px; height: 320px;
-    border-radius: 50%; background: radial-gradient(circle, rgba(52, 192, 143, 0.14), rgba(52, 192, 143, 0) 70%);}
-.ms-hero > * {position: relative; z-index: 1;}
-.ms-hero-brand {display: flex; align-items: center; gap: 0.65rem; font-weight: 700; font-size: 1.08rem; color: #20354A;
-    font-family: "Plus Jakarta Sans", Inter, sans-serif;}
-.ms-hero-mark {width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(145deg, #34C08F, #0B6B50);
-    box-shadow: 0 6px 14px -4px rgba(14, 122, 92, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);}
-.ms-hero h1 {font-family: "Plus Jakarta Sans", Inter, sans-serif; color: #20354A; font-size: 2.3rem;
-    line-height: 1.14; letter-spacing: -0.03em; font-weight: 800; margin: 1.9rem 0 0.7rem 0;}
-.ms-hero h1 em {font-style: normal; background: linear-gradient(90deg, #0E7A5C, #34C08F);
-    -webkit-background-clip: text; background-clip: text; color: transparent;}
-.ms-hero p.lead {color: #5C6B7D; font-size: 1rem; max-width: 470px; margin: 0; line-height: 1.6;}
-.ms-hero-chips {display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem;}
-.ms-hero-chip {display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.38rem 0.75rem; border-radius: 999px;
-    background: #FFFFFF; border: 1px solid #DDEDE6; color: #2F5A4C; font-size: 0.8rem; font-weight: 500;
-    box-shadow: 0 2px 6px -2px rgba(16, 90, 66, 0.15);}
-.ms-hero-chip svg {color: #0E7A5C;}
+/* left: story and the isometric schema */
+.ms-brand {display: flex; align-items: center; gap: 0.6rem; font-family: "Plus Jakarta Sans", Inter, sans-serif;
+    font-weight: 700; font-size: 1.05rem; color: #20354A;}
+.ms-brand-mark {width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; background: linear-gradient(145deg, #34C08F, #0B6B50);
+    box-shadow: 0 6px 14px -5px rgba(14, 122, 92, 0.6);}
+.ms-story h1 {font-family: "Plus Jakarta Sans", Inter, sans-serif; color: #20354A; font-size: 2.25rem;
+    line-height: 1.15; letter-spacing: -0.03em; font-weight: 800; margin: 1.6rem 0 0.6rem 0; padding: 0;}
+.ms-story h1 em {font-style: normal; color: #0E7A5C;}
+.ms-story p.lead {color: #5C6B7D; font-size: 1rem; line-height: 1.6; max-width: 480px; margin: 0;}
+.ms-iso {display: block; width: 100%; max-width: 540px; margin: 0.6rem 0 0 -10px; overflow: visible;}
+.ms-iso .blk {animation: ms-float 6s ease-in-out infinite;}
+.ms-iso .blk.d1 {animation-delay: -1.5s;} .ms-iso .blk.d2 {animation-delay: -3s;}
+.ms-iso .blk.d3 {animation-delay: -4.5s;}
+@keyframes ms-float {0%, 100% {transform: translateY(0);} 50% {transform: translateY(-7px);}}
+.ms-iso .flow {stroke-dasharray: 5 7; animation: ms-flow 1.6s linear infinite;}
+@keyframes ms-flow {to {stroke-dashoffset: -24;}}
+.ms-iso .lbl {font-family: Inter, sans-serif; font-size: 12px; font-weight: 600; fill: #2F5A4C;}
+.ms-iso .lbl-main {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 13px; font-weight: 700; fill: #0B6B50;}
+.ms-iso .pulse {animation: ms-pulse 2.4s ease-out infinite; transform-origin: 270px 228px;}
+@keyframes ms-pulse {0% {opacity: 0.45; transform: scale(0.85);} 100% {opacity: 0; transform: scale(1.35);}}
 
-/* the 3D stage */
-.ms-3d {position: relative; height: 330px; margin-top: 0.4rem; perspective: 1100px;}
-.ms-3d-art {position: absolute; left: 50%; top: 10px; width: 420px; max-width: 100%; transform: translateX(-50%);
-    overflow: visible;}
-.ms-float-a {animation: ms-float 6s ease-in-out infinite; transform-origin: center;}
-.ms-float-b {animation: ms-float 7s ease-in-out -2s infinite;}
-.ms-float-c {animation: ms-float 8s ease-in-out -4s infinite;}
-@keyframes ms-float {0%, 100% {transform: translateY(0);} 50% {transform: translateY(-9px);}}
-.ms-glass {position: absolute; padding: 0.7rem 0.85rem; border-radius: 14px; background: rgba(255, 255, 255, 0.78);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 18px 40px -18px rgba(16, 60, 45, 0.35), 0 2px 6px rgba(16, 60, 45, 0.06);
-    transform-style: preserve-3d; animation: ms-drift 9s ease-in-out infinite;}
-.ms-glass-1 {left: 0; top: 18px; width: 190px; transform: rotateY(16deg) rotateX(6deg); animation-delay: -1s;}
-.ms-glass-2 {right: 0; top: 26px; width: 176px; transform: rotateY(-18deg) rotateX(6deg); animation-delay: -4s;}
-.ms-glass-3 {left: 50%; bottom: 4px; display: flex; align-items: center; gap: 0.45rem; white-space: nowrap;
-    transform: translateX(-50%) rotateX(14deg); color: #2F5A4C; font-size: 0.8rem; font-weight: 600;
-    animation-delay: -6s;}
-.ms-glass-3 svg {color: #0E7A5C;}
-@keyframes ms-drift {0%, 100% {margin-top: 0;} 50% {margin-top: -6px;}}
-.ms-glass-k {font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #7A8898;}
-.ms-glass-v {font-weight: 700; color: #20354A; font-size: 0.92rem; margin: 0.15rem 0 0.45rem 0;}
-.ms-glass-scale {position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 0.55rem;}
-.ms-glass-scale div {height: 7px; border-radius: 999px;}
-.ms-glass-scale div:nth-child(1) {background: #D9E3F0;} .ms-glass-scale div:nth-child(2) {background: #F1E2BE;}
-.ms-glass-scale div:nth-child(3) {background: #F2D6D6;}
-.ms-glass-scale i {position: absolute; left: 76%; top: -4px; width: 4px; height: 15px; border-radius: 3px;
-    background: #20354A; box-shadow: 0 0 0 2px #FFFFFF;}
-.ms-glass-labels {display: flex; justify-content: space-between; font-size: 0.66rem; color: #9AA8B6; margin-top: 0.3rem;}
-
-/* right: the form on a raised card */
-.ms-signin-gap {height: 2.6rem;}
-.st-key-login_card {background: #FFFFFF; border: 1px solid #E3EFEA; border-radius: 22px; padding: 2rem 2rem 1.6rem 2rem;
-    box-shadow: 0 1px 2px rgba(16, 60, 45, 0.04), 0 30px 60px -30px rgba(16, 60, 45, 0.30),
-                0 10px 24px -12px rgba(16, 60, 45, 0.10);}
+/* right: the sign-in card */
+.ms-signin-gap {height: 4.5rem;}
+.st-key-login_card {background: #FFFFFF; border: 1px solid #E3EFEA; border-radius: 20px; padding: 2.1rem 2rem 1.8rem;
+    box-shadow: 0 1px 2px rgba(16, 60, 45, 0.04), 0 30px 70px -32px rgba(16, 60, 45, 0.32),
+                0 10px 24px -14px rgba(16, 60, 45, 0.10);
+    animation: ms-rise 0.5s ease-out both;}
+@keyframes ms-rise {from {opacity: 0; transform: translateY(12px);} to {opacity: 1; transform: none;}}
 .ms-signin-badge {display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px;
     background: #ECFDF3; border: 1px solid #ABEFC6; color: #067647; font-size: 0.76rem; font-weight: 600;}
-.ms-signin-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.75rem; font-weight: 800;
-    letter-spacing: -0.02em; color: #20354A; margin: 0.9rem 0 0 0;}
-.ms-signin-sub {color: #6B7A8C; margin: 0.35rem 0 1.3rem 0;}
+.ms-signin-title {font-family: "Plus Jakarta Sans", Inter, sans-serif; font-size: 1.7rem; font-weight: 700 !important;
+    letter-spacing: -0.02em; color: #20354A; margin: 0.9rem 0 0 0; padding: 0;}
+.ms-signin-sub {color: #6B7A8C; margin: 0.35rem 0 1.4rem 0;}
 .st-key-login_card .stFormSubmitButton button p {color: #FFFFFF !important; font-weight: 600;}
 .st-key-login_card .stFormSubmitButton button {height: 2.9rem; font-size: 0.98rem; color: #FFFFFF;
     background: linear-gradient(180deg, #14916E, #0E7A5C); border: none;
     box-shadow: 0 10px 20px -10px rgba(14, 122, 92, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);}
-.ms-roles {margin-top: 1.3rem; border: 1px solid #EDF2F0; border-radius: 12px; background: #FAFCFB;}
-.ms-role {display: flex; justify-content: space-between; gap: 1rem; padding: 0.6rem 0.9rem;
-    border-top: 1px solid #EEF3F1; font-size: 0.84rem;}
-.ms-role:first-child {border-top: none;}
-.ms-role code {background: #ECFDF3; color: #0B6B50; padding: 0.08rem 0.45rem; border-radius: 6px; font-size: 0.8rem;}
-.ms-role span {color: #7A8898; text-align: right;}
+.ms-signin-note {display: flex; align-items: center; gap: 0.45rem; margin-top: 1.1rem; padding-top: 1rem;
+    border-top: 1px solid #EEF3F1; color: #7A8898; font-size: 0.8rem;}
+.ms-signin-note svg {color: #0E7A5C; flex-shrink: 0;}
 
 @media (max-width: 900px) {
-    .ms-hero {padding: 1.6rem;} .ms-hero h1 {font-size: 1.75rem; margin-top: 1.3rem;}
-    .ms-3d, .ms-hero-chips {display: none;} .ms-signin-gap {height: 0.6rem;}
-    .st-key-login_card {padding: 1.5rem;}
+    .ms-iso {display: none;} .ms-story h1 {font-size: 1.7rem; margin-top: 1.1rem;}
+    .ms-signin-gap {height: 0.8rem;} .st-key-login_card {padding: 1.5rem 1.25rem;}
 }
 @media (prefers-reduced-motion: reduce) {
-    .ms-float-a, .ms-float-b, .ms-float-c, .ms-glass {animation: none;}
+    .ms-iso .blk, .ms-iso .flow, .ms-iso .pulse, .st-key-login_card {animation: none;}
 }
 </style>
 """

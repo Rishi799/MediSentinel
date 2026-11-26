@@ -26,101 +26,56 @@ ui.apply_styles()
 session.init_session()
 
 
-SCENE_SVG = """
-<svg class="ms-3d-art" viewBox="0 0 420 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <defs>
-    <linearGradient id="shieldFront" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#34C08F"/><stop offset="0.55" stop-color="#139170"/><stop offset="1" stop-color="#0B6B50"/>
-    </linearGradient>
-    <linearGradient id="shieldSide" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0A5A43"/><stop offset="1" stop-color="#073F30"/>
-    </linearGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="capGreen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#5FD1A8"/><stop offset="1" stop-color="#119072"/>
-    </linearGradient>
-    <linearGradient id="capWhite" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9E6E1"/>
-    </linearGradient>
-    <linearGradient id="dbBody" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#C9EBDD"/><stop offset="0.5" stop-color="#F2FBF7"/><stop offset="1" stop-color="#B5E0CF"/>
-    </linearGradient>
-    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
-  </defs>
-  <!-- ground shadows -->
-  <ellipse cx="212" cy="272" rx="92" ry="12" fill="#0E7A5C" opacity="0.18" filter="url(#soft)"/>
-  <ellipse cx="78" cy="262" rx="44" ry="7" fill="#0E7A5C" opacity="0.14" filter="url(#soft)"/>
-  <ellipse cx="352" cy="252" rx="40" ry="7" fill="#0E7A5C" opacity="0.14" filter="url(#soft)"/>
-  <!-- database cylinder -->
-  <g class="ms-float-c">
-    <rect x="42" y="158" width="72" height="78" fill="url(#dbBody)"/>
-    <ellipse cx="78" cy="236" rx="36" ry="11" fill="#A9D9C5"/>
-    <rect x="42" y="158" width="72" height="78" fill="url(#dbBody)"/>
-    <path d="M42 184 a36 11 0 0 0 72 0" fill="none" stroke="#8CCBB1" stroke-width="1.5"/>
-    <path d="M42 210 a36 11 0 0 0 72 0" fill="none" stroke="#8CCBB1" stroke-width="1.5"/>
-    <ellipse cx="78" cy="158" rx="36" ry="11" fill="#E9F7F1" stroke="#9FD5BF" stroke-width="1.5"/>
-    <circle cx="98" cy="196" r="2.6" fill="#0E7A5C"/><circle cx="98" cy="222" r="2.6" fill="#34C08F"/>
-  </g>
-  <!-- 3D shield -->
-  <g class="ms-float-a">
-    <path d="M222 34 L292 60 V128 C292 182 260 216 222 232 C184 216 152 182 152 128 V60 Z" fill="url(#shieldSide)"
-          transform="translate(10 10)"/>
-    <path d="M212 30 L282 56 V124 C282 178 250 212 212 228 C174 212 142 178 142 124 V56 Z" fill="url(#shieldFront)"/>
-    <path d="M212 30 L282 56 V92 C240 76 186 82 142 104 V56 Z" fill="url(#shine)"/>
-    <path d="M212 46 L268 67 V124 C268 170 242 198 212 212 C182 198 156 170 156 124 V67 Z" fill="none"
-          stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="2"/>
-    <path d="M182 126 L204 148 L246 104" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"
-          stroke-linejoin="round"/>
-  </g>
-  <!-- capsule -->
-  <g class="ms-float-b">
-    <g transform="rotate(-32 352 150)">
-      <rect x="306" y="130" width="46" height="40" rx="20" fill="url(#capGreen)"/>
-      <rect x="352" y="130" width="46" height="40" rx="20" fill="url(#capWhite)"/>
-      <rect x="340" y="130" width="24" height="40" fill="url(#capWhite)"/>
-      <rect x="330" y="130" width="22" height="40" fill="url(#capGreen)"/>
-      <rect x="316" y="137" width="70" height="7" rx="3.5" fill="#FFFFFF" opacity="0.55"/>
-      <line x1="352" y1="130" x2="352" y2="170" stroke="#0B6B50" stroke-opacity="0.25" stroke-width="1.5"/>
-    </g>
-  </g>
-</svg>
-"""
+def _block(cx, cy, a, h, top, left, right, label, cls="blk", main=False, side=False):
+    """One isometric box: a diamond top face and two shaded side faces, with its table name above."""
+    t = f"{cx},{cy - a / 2} {cx + a},{cy} {cx},{cy + a / 2} {cx - a},{cy}"
+    lf = f"{cx - a},{cy} {cx},{cy + a / 2} {cx},{cy + a / 2 + h} {cx - a},{cy + h}"
+    rf = f"{cx},{cy + a / 2} {cx + a},{cy} {cx + a},{cy + h} {cx},{cy + a / 2 + h}"
+    text_cls = "lbl-main" if main else "lbl"
+    return (f'<g class="{cls}"><polygon points="{lf}" fill="{left}"/><polygon points="{rf}" fill="{right}"/>'
+            f'<polygon points="{t}" fill="{top}" stroke="#FFFFFF" stroke-opacity="0.7"/>'
+            + (f'<text x="{cx + a + 12}" y="{cy + h / 2 + 4}" class="{text_cls}">{label}</text></g>' if side else
+               f'<text x="{cx}" y="{cy - a / 2 - 10}" text-anchor="middle" class="{text_cls}">{label}</text></g>'))
 
 
-def login_scene():
-    """The decorative 3D scene: shield, capsule, database and three tilted glass cards (all illustrative)."""
-    major = ui.SEVERITY_STYLE["MAJOR"]
+def schema_scene():
+    """Isometric view of the real data flow: three tables feed the safety trigger, which writes Alert_Log."""
+    pale = ("#E9F7F1", "#C7E9DB", "#B2DFCC")
+    mid = ("#CFEFE2", "#9FD5BF", "#86C9AE")
+    green = ("#34C08F", "#0E7A5C", "#0B6B50")
+    alert = ("#FCF2F2", "#F2D6D6", "#E8C3C3")
+    lines = "".join(
+        f'<path class="flow" d="M{x1} {y1} L{x2} {y2}" stroke="{c}" stroke-width="2" fill="none"/>'
+        for x1, y1, x2, y2, c in ((110, 172, 222, 228, "#34C08F"), (270, 104, 270, 196, "#34C08F"),
+                                  (430, 172, 318, 228, "#34C08F"), (270, 282, 270, 330, "#D46A6A")))
     return (
-        '<div class="ms-3d" aria-hidden="true">' + "".join(line.strip() for line in SCENE_SVG.splitlines()) +
-        '<div class="ms-glass ms-glass-1"><div class="ms-glass-k">Drug interaction</div>'
-        '<div class="ms-glass-v">Warfarin + Aspirin</div>'
-        f'<span class="ms-pill" style="background:{major["bg"]};color:{major["text"]};border-color:{major["border"]}">'
-        f'<span class="dot" style="background:{major["color"]}"></span>Major · bleeding risk</span></div>'
-        '<div class="ms-glass ms-glass-2"><div class="ms-glass-k">Model risk score</div>'
-        '<div class="ms-glass-scale"><div></div><div></div><div></div><i></i></div>'
-        '<div class="ms-glass-labels"><span>Low</span><span>Medium</span><span>High</span></div></div>'
-        f'<div class="ms-glass ms-glass-3">{ui.icon("zap", 15)}<span>Checked by the trigger in under 1 ms</span></div>'
-        '</div>')
+        '<svg class="ms-iso" viewBox="0 0 540 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+        '<ellipse cx="270" cy="228" rx="120" ry="60" fill="#34C08F" class="pulse" opacity="0.3"/>'
+        + lines
+        + _block(110, 150, 46, 26, *pale, "Patient", "blk d1")
+        + _block(270, 82, 46, 26, *mid, "Prescription", "blk d2")
+        + _block(430, 150, 46, 26, *pale, "Medication", "blk d3")
+        + _block(270, 214, 66, 40, *green, "trg_medication_safety", "blk", main=True, side=True)
+        + '<path d="M252 214 l12 11 l24 -22" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round" '
+          'stroke-linejoin="round" class="blk"/>'
+        + _block(270, 352, 46, 24, *alert, "Alert_Log", "blk d1", side=True)
+        + '</svg>')
 
 
 def login_page():
-    """Split-screen sign-in: a 3D product scene on the left, the form on a raised card on the right.
+    """Split screen: the isometric schema story on the left, the sign-in card on the right.
     The username and password are checked by PostgreSQL itself."""
     ui.apply_login_styles()
-    hero_col, _, form_col = st.columns([1.15, 0.08, 0.9])
+    story_col, _, form_col = st.columns([1.2, 0.1, 0.85])
 
-    with hero_col:
-        chips = "".join(f'<span class="ms-hero-chip">{ui.icon(name, 14)}{text}</span>' for name, text in (
-            ("zap", "Real-time trigger"), ("lock", "PostgreSQL roles"), ("globe", "openFDA knowledge")))
+    with story_col:
         st.markdown(
-            f'<div class="ms-hero"><div class="ms-hero-brand"><div class="ms-hero-mark">'
-            f'{ui.icon("shield", 18, "#FFFFFF")}</div>MediSentinel</div>'
-            f'<h1>Medication safety,<br><em>enforced by the database.</em></h1>'
-            f'<p class="lead">Real-time interaction, contraindication and allergy checks for every prescription, '
-            f'with an audit trail for every override.</p>{login_scene()}'
-            f'<div class="ms-hero-chips">{chips}</div></div>', unsafe_allow_html=True)
+            f'<div class="ms-story"><div class="ms-brand"><div class="ms-brand-mark">{ui.icon("shield", 18, "#FFFFFF")}'
+            '</div>MediSentinel</div>'
+            '<h1>Medication safety,<br><em>enforced by the database.</em></h1>'
+            '<p class="lead">Every prescription passes through a PostgreSQL trigger that checks interactions, '
+            'contraindications and allergies before it is saved.</p>'
+            f'{schema_scene()}</div>', unsafe_allow_html=True)
 
     with form_col:
         st.markdown('<div class="ms-signin-gap"></div>', unsafe_allow_html=True)
@@ -130,7 +85,7 @@ def login_page():
                         '<p class="ms-signin-sub">Sign in with the database login for your role.</p>',
                         unsafe_allow_html=True)
             with st.form("login_form", border=False):
-                username = st.text_input("Username", placeholder="e.g. ms_doctor")
+                username = st.text_input("Username", placeholder="ms_doctor")
                 password = st.text_input("Password", type="password", placeholder="Your role password")
                 submit = st.form_submit_button("Sign in", type="primary", width="stretch")
             if submit:
@@ -139,12 +94,8 @@ def login_page():
                     st.rerun()
                 else:
                     st.error(error_msg, icon=":material/error:")
-            st.markdown(
-                '<div class="ms-roles">'
-                '<div class="ms-role"><code>ms_doctor</code><span>Patients, prescriptions, overrides</span></div>'
-                '<div class="ms-role"><code>ms_pharmacist</code><span>Read-only review</span></div>'
-                '<div class="ms-role"><code>ms_admin</code><span>Full access, data loading</span></div></div>',
-                unsafe_allow_html=True)
+            st.markdown(f'<div class="ms-signin-note">{ui.icon("info", 15)}What you can see and change depends '
+                        'on your role.</div>', unsafe_allow_html=True)
 
 
 if not session.is_logged_in():
