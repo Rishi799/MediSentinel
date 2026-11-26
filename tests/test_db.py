@@ -129,7 +129,8 @@ def test_dashboard_summaries(pharmacist):
     assert counts["active_alerts"] == sum(r["n"] for r in db.alert_breakdown(pharmacist))
     recent = db.recent_prescriptions(pharmacist, limit=3)
     assert 0 < len(recent) <= 3 and all(r["medicines"] for r in recent)
-    assert db.list_signals(pharmacist, limit=1)[0]["medication"] == "Simvastatin"  # highest PRR in the seed
+    prrs = [s["prr"] for s in db.list_signals(pharmacist, limit=5)]
+    assert prrs and prrs == sorted(prrs, reverse=True)  # strongest signals first
 
 
 def test_patient_profile_shows_what_the_trigger_checks(doctor, med, new_patient):
