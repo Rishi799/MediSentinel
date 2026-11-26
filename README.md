@@ -21,17 +21,24 @@ MediSentinel/
 │   ├── config.py            settings from .env
 │   ├── constants.py         dropdown values shared by forms and test data
 │   └── db/                  PostgreSQL functions used by the app and scripts
-├── app/                     Streamlit forms, login, alerts pages                (Person C)
-├── ingestion/               openFDA → MongoDB, Medication loader, test data     (Person B)
+├── app/                     Streamlit app: login, dashboard, forms, alerts, analytics (Person C)
+├── ingestion/               openFDA → MongoDB, Medication loader, Indian brands, test data (Person B)
+├── nlp/                     rule extraction from FDA label text, gold set and evaluation (Phase 2)
+├── ml/                      risk model: features, training, alert scoring           (Phase 2)
+├── analytics/               rule bridge (labels → SQL rules), PRR/ROR signal mining  (Phase 2)
+├── reports/                 report chapters, paper sections, figures, screenshots
 ├── sql/
 │   ├── schema.sql           tables, keys, constraints, indexes, trigger, function, view
 │   ├── roles.sql            login roles ms_doctor / ms_pharmacist / ms_admin and their rights
 │   ├── seed_demo.sql        sample data (fires the safety trigger)
 │   ├── queries.sql          joins, subquery, aggregation, window function
+│   ├── benchmark.sql        EXPLAIN ANALYZE queries used by tools/benchmark.py
+│   ├── test_invalid_inserts.sql  invalid writes the database must refuse (validation demo)
 │   └── 00_run_all.sql       one-shot schema + seed for psql
 ├── tests/                   automated tests (python -m pytest)
 └── tools/
     ├── check_setup.py       checks .env, PostgreSQL logins and MongoDB on your machine
+    ├── benchmark.py         index and trigger benchmarks → reports/benchmark_results.md
     └── run_demo.py          zero-install check of the SQL logic (Python sqlite3)
 ```
 
@@ -71,6 +78,22 @@ Needs **PostgreSQL 18**, **MongoDB 8** and **Python 3.13**.
    python ingestion/generate_synthetic.py
    ```
 
+## Phase 2 pipeline
+
+Run these in order after the Phase 1 data is loaded (each step can be re-run safely):
+
+```bash
+python -m nlp.extract_rules              # FDA label text → nlp/output/rules.jsonl
+python -m analytics.bridge               # rules → Interaction / Contraindication (with source_label_id)
+python ingestion/load_indian_brands.py   # Indian brands (Dolo 650, Ecosprin …) + their generic's rules
+python -m analytics.signal_mining        # FAERS reports → PRR / ROR signals in Adverse_Signal
+python -m ml.score_alerts                # model risk score on every alert (Alert_Log.risk_score)
+python -m nlp.evaluate --reviewed        # precision / recall / F1 against nlp/gold/gold_sheet.csv
+python tools/benchmark.py                # index and trigger benchmarks → reports/benchmark_results.md
+```
+
+To train the risk model again: `python -m ml.build_dataset` then `python -m ml.train_risk_model`.
+
 ## Run the app
 
 ```bash
@@ -86,6 +109,7 @@ Sign in with `ms_doctor`, `ms_pharmacist` or `ms_admin` and the matching passwor
 | Prescriptions | new prescription beside the patient's safety context, the trigger's verdict as alert cards; history |
 | Safety alerts | filters by patient, severity and type; doctor override with a reason; override audit trail |
 | Drug safety data | openFDA labels and adverse-event reports from MongoDB, label lookup, PRR/ROR signals |
+| Analytics | rules learned from FDA labels, risk-score distribution, signal map, alerts by department, override audit |
 
 ## Login roles
 
@@ -116,7 +140,7 @@ Phase 2: spaCy/scispaCy (NLP), scikit-learn (ML)
 |---|---|---|
 | Design | ER diagram, relational mapping, DFD, synopsis, SRS | Done |
 | 1 | Database layer, login roles, MongoDB + openFDA data, forms with validation → Partial Demo | Done (tag `v1-partial-demo`) |
-| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | Planned |
+| 2 | NLP rule extraction, PRR/ROR signals, ML risk score, dashboard, paper and report | In progress |
 
 ## Team
 

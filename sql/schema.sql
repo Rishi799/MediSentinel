@@ -107,7 +107,7 @@ CREATE TABLE Alert_Log (
     created_at      TIMESTAMP DEFAULT NOW(),
     overridden      BOOLEAN DEFAULT FALSE,
     override_reason TEXT,
-    risk_score      NUMERIC(4,3) CHECK (risk_score BETWEEN 0 AND 1)   -- ML-predicted risk (Phase 3)
+    risk_score      NUMERIC(4,3) CHECK (risk_score BETWEEN 0 AND 1)   -- ML-predicted risk (Phase 2)
 );
 
 -- ============================ INDEXES ============================
