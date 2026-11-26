@@ -20,7 +20,14 @@ activity = db.daily_activity(conn, days=30)
 month_rx = sum(d["prescriptions"] for d in activity)
 month_alerts = sum(d["alerts"] for d in activity)
 
+<<<<<<< HEAD
 c1, c2, c3, c4 = st.columns(4)
+=======
+high_risk = conn.execute("SELECT count(*) AS n FROM Alert_Log WHERE risk_score >= %s",
+                         (0.66,)).fetchone()["n"]
+
+c1, c2, c3, c4, c5, c6 = st.columns(6)
+>>>>>>> origin/main
 with c1:
     ui.kpi("Patients", counts["patients"], "Registered profiles", "users", "brand")
 with c2:
@@ -29,7 +36,22 @@ with c3:
     ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major · awaiting review",
            "alert", "danger")
 with c4:
+<<<<<<< HEAD
     ui.kpi("Overrides", counts["overridden_alerts"], "Each with a recorded reason", "history")
+=======
+    ui.kpi("Overridden", counts["overridden_alerts"], "with a recorded reason")
+with c5:
+    ui.kpi("Medicines", counts["medications"], "in the catalogue")
+with c6:
+    ui.kpi("High-risk alerts", high_risk, "score ≥ 66%", tone="critical")
+
+if role in ("doctor", "admin"):
+    st.write("")
+    a1, a2, a3, _ = st.columns([1, 1, 1, 2])
+    a1.page_link("pages/1_Patients.py", label="Register a patient", icon=":material/person_add:")
+    a2.page_link("pages/2_Prescriptions.py", label="New prescription", icon=":material/add_circle:")
+    a3.page_link("pages/3_Alerts.py", label="Review alerts", icon=":material/notifications_active:")
+>>>>>>> origin/main
 
 st.write("")
 left, right = st.columns([1.35, 1], gap="medium")

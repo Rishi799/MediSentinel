@@ -9,3 +9,9 @@ Faker>=30.0               # synthetic test data
 
 # development
 pytest>=8.3
+
+# Phase 2
+spacy>=3.8
+scikit-learn>=1.6
+joblib>=1.4
+matplotlib>=3.9

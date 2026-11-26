@@ -81,12 +81,23 @@ p, li {color: #344054;}
 .stButton button, .stFormSubmitButton button {font-weight: 600;}
 [data-testid="stDataFrame"] {border-radius: 8px;}
 
+<<<<<<< HEAD
 /* page header */
 .ms-eyebrow {font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
     color: #0E7A5C; margin-bottom: 0.25rem;}
 .ms-title {font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; color: #101828; margin: 0;
     line-height: 1.25;}
 .ms-subtitle {color: #667085; font-size: 0.97rem; margin: 0.35rem 0 1.4rem 0; max-width: 760px;}
+=======
+.ms-badge {display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.12rem 0.55rem;
+    border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;}
+.ms-chip {display: inline-block; padding: 0.15rem 0.6rem; margin: 0 0.3rem 0.35rem 0;
+    border-radius: 999px; font-size: 0.82rem; background: #EEF2F6; color: #0F172A;
+    border: 1px solid #E2E8F0;}
+.ms-chip.ms-warn {background: #FDECEC; border-color: #F5C2C2; color: #8A1C1C;}
+.ms-muted {color: #64748B; font-size: 0.85rem;}
+div.stVerticalBlock[class*="st-key-card_"] {background: #FFFFFF; border-radius: 0.6rem;}
+>>>>>>> origin/main
 
 /* KPI cards */
 .ms-kpi {background: #FFFFFF; border: 1px solid #EAECF0; border-radius: 12px; padding: 1.05rem 1.15rem;
@@ -248,8 +259,16 @@ def apply_styles():
     st.markdown(_CSS, unsafe_allow_html=True)
 
 
+<<<<<<< HEAD
 def apply_login_styles():
     st.markdown(_LOGIN_CSS, unsafe_allow_html=True)
+=======
+def page_header(icon, title, subtitle=""):
+    sub = f"<p>{escape(subtitle)}</p>" if subtitle else ""
+    mark = f'<div class="ms-icon">{icon}</div>' if icon else ""
+    st.markdown(f'<div class="ms-header">{mark}'
+                f'<div><h1>{escape(title)}</h1>{sub}</div></div>', unsafe_allow_html=True)
+>>>>>>> origin/main
 
 
 def page_header(title, subtitle="", eyebrow=""):
@@ -307,6 +326,33 @@ def alert_list(alerts, meta=None):
             f'<span class="ms-muted">· {escape(kind)}</span></div>'
             f'<div class="ms-alert-msg">{escape(str(a.get("message", "")))}</div>{meta_html}</div></div>')
     st.markdown(f'<div class="ms-alerts">{"".join(rows)}</div>', unsafe_allow_html=True)
+
+
+def risk_meter(score):
+    """Show a model score with an accessible percentage and a named band."""
+    if score is None:
+        st.caption("Not scored yet")
+        return
+    score = float(score)
+    if score < 0.33:
+        label, severity = "Low", "MINOR"
+    elif score < 0.66:
+        label, severity = "Medium", "MODERATE"
+    else:
+        label, severity = "High", "MAJOR"
+    color = SEVERITY_STYLE[severity]["color"]
+    percentage = f"{score:.1%}"
+    st.markdown(
+        f'<div style="display:grid;gap:0.32rem;padding:0.2rem 0 0.55rem">'
+        f'<span style="color:{color};font-size:0.85rem;font-weight:650">'
+        f'{label} · {percentage}</span>'
+        f'<div role="meter" aria-label="{label} model score" aria-valuemin="0" '
+        f'aria-valuemax="100" aria-valuenow="{score * 100:.1f}" '
+        f'aria-valuetext="{label} {percentage}" '
+        f'style="height:0.42rem;border-radius:1rem;background:#E2E8F0;overflow:hidden">'
+        f'<div style="height:100%;width:{percentage};background:{color}"></div></div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def chips(items, warn=False, empty="None recorded"):
