@@ -1,20 +1,33 @@
 # MediSentinel look and feel (Streamlit reads this when started from the repo root)
 [theme]
 base = "light"
-primaryColor = "#0F766E"
-backgroundColor = "#F6F8FA"
-secondaryBackgroundColor = "#EEF2F6"
-textColor = "#0F172A"
-font = "sans-serif"
-baseRadius = "0.6rem"
-borderColor = "#E2E8F0"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+baseFontSize = 15
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+primaryColor = "#0E7A5C"
+backgroundColor = "#F6F7F9"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#101828"
+linkColor = "#0E7A5C"
+borderColor = "#E4E7EC"
+dataframeBorderColor = "#EAECF0"
+dataframeHeaderBackgroundColor = "#F9FAFB"
 showWidgetBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+redColor = "#D92D20"
+orangeColor = "#DC6803"
+blueColor = "#1570EF"
+greenColor = "#079455"
+chartCategoricalColors = ["#0E7A5C", "#1570EF", "#DC6803", "#7A5AF8", "#D92D20"]
 
 [theme.sidebar]
-backgroundColor = "#0B1F33"
-secondaryBackgroundColor = "#13304D"
-textColor = "#E2E8F0"
-borderColor = "#1E3A5F"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F7"
+textColor = "#344054"
+borderColor = "#EAECF0"
+showSidebarBorder = true
 
 [client]
 toolbarMode = "minimal"

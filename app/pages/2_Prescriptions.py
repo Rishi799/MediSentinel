@@ -1,4 +1,4 @@
-"""Prescriptions: write a prescription and see the safety trigger's verdict at once (Task C4)."""
+"""Prescriptions: build a prescription with a live safety preview, then save it through the trigger (Task C4)."""
 
 import pandas as pd
 import streamlit as st
@@ -9,43 +9,43 @@ from medisentinel import constants, db
 
 conn = session.require_login()
 
-ui.page_header("💊", "Prescriptions", "Every medicine is checked by the database trigger the moment it is saved.")
+ui.page_header("Prescriptions", "Safety problems show up as you choose medicines. The database trigger makes the "
+                                "final check when you save.", eyebrow="Clinical")
 
-tab_names = ["New prescription", "History"] if session.can_write() else ["History"]
-tabs = st.tabs(tab_names)
+tabs = st.tabs(["New prescription", "History"] if session.can_write() else ["History"])
+SEVERITY_RANK = {"MAJOR": 0, "MODERATE": 1, "MINOR": 2}
 
 
 def show_history():
     recent = db.recent_prescriptions(conn, limit=50)
     if not recent:
-        st.info("No prescriptions yet.")
+        ui.empty_state("file", "No prescriptions yet", "Saved prescriptions appear here.")
         return
-    st.dataframe(
-        pd.DataFrame(recent)[["prescription_id", "prescribed_date", "patient", "doctor", "medicines",
-                              "alerts", "status"]],
-        hide_index=True, width="stretch", height=480,
-        column_config={
-            "prescription_id": st.column_config.NumberColumn("Rx #", format="%d", width="small"),
-            "prescribed_date": st.column_config.DateColumn("Date", format="DD MMM YYYY"),
-            "patient": "Patient", "doctor": "Doctor",
-            "medicines": st.column_config.TextColumn("Medicines", width="large"),
-            "alerts": st.column_config.NumberColumn("Alerts raised", format="%d", width="small"),
-            "status": "Status",
-        })
+    for r in recent:
+        r["rx"] = f"RX-{r['prescription_id']:05d}"
+        r["date"] = f"{r['prescribed_date']:%d %b %Y}"
+        r["alert_pill"] = (ui.neutral_pill(f"{r['alerts']} alert" + ("s" if r["alerts"] != 1 else ""),
+                                           "#B42318", "#FEF3F2", "#FECDCA") if r["alerts"]
+                           else ui.neutral_pill("Clear", "#067647", "#ECFDF3", "#ABEFC6"))
+        r["status_pill"] = ui.neutral_pill((r["status"] or "").capitalize())
+    ui.table(recent, [("rx", "Prescription", "strong"), ("date", "Date", "num"), ("patient", "Patient", ""),
+                      ("doctor", "Doctor", ""), ("medicines", "Medicines", ""), ("alert_pill", "Safety", "html"),
+                      ("status_pill", "Status", "html")])
     st.caption("Latest 50 prescriptions.")
 
 
-def show_context(patient_id):
-    """What the trigger will compare the new medicines against."""
-    profile = db.patient_profile(conn, patient_id)
-    st.markdown("##### Safety context")
-    st.caption("The trigger checks each new medicine against these.")
-    st.markdown("**Active medicines** · interactions")
-    ui.chips([m["name"] for m in profile["active_medicines"]], empty="None")
-    st.markdown("**Conditions** · contraindications")
-    ui.chips(profile["conditions"], empty="None")
-    st.markdown("**Allergies**")
+def show_context(profile):
+    ui.label("Already taking · checked for interactions")
+    ui.chips([m["name"] for m in profile["active_medicines"]], empty="No active medicines")
+    ui.label("Conditions · checked for contraindications")
+    ui.chips(profile["conditions"], empty="None recorded")
+    ui.label("Allergies")
     ui.chips([a["substance"] for a in profile["allergies"]], warn=True, empty="No known allergies")
+
+
+def empty_items():
+    return pd.DataFrame({"Medicine": pd.Series([None], dtype="object"), "Dose": pd.Series([""], dtype="object"),
+                         "Frequency": pd.Series([constants.FREQUENCIES[0]], dtype="object")})
 
 
 if session.can_write():
@@ -58,51 +58,73 @@ if session.can_write():
             st.warning("Patients, doctors and medicines must exist before a prescription can be written.")
         else:
             patient_options = {f"{p['full_name']} · #{p['patient_id']}": p["patient_id"] for p in patients}
-            doctor_options = {f"{d['full_name']} ({d['specialty'] or 'General'})": d["doctor_id"]
-                              for d in doctors}
+            patient_labels = list(patient_options.keys())
+            doctor_options = {f"{d['full_name']} · {d['specialty'] or 'General'}": d["doctor_id"] for d in doctors}
             med_options = {
                 (f"{m['name']} ({m['generic_name']})" if m.get("generic_name") else m["name"]): m["med_id"]
                 for m in medications
             }
 
-            form_col, context_col = st.columns([1.6, 1], gap="large")
+            # a patient handed over from the Patients page is pre-selected
+            handover = st.session_state.pop("rx_patient_id", None)
+            if handover is not None:
+                st.session_state["rx_patient"] = next(
+                    (lbl for lbl, pid in patient_options.items() if pid == handover), patient_labels[0])
+            st.session_state.setdefault("rx_editor_version", 0)
 
-            with context_col:
-                with st.container(border=True):
-                    patient_label = st.selectbox("Patient *", options=list(patient_options.keys()),
-                                                 key="rx_patient")
-                    patient_id = patient_options[patient_label]
-                    show_context(patient_id)
+            form_col, side_col = st.columns([1.65, 1], gap="medium")
 
             with form_col:
-                with st.container(border=True):
-                    top1, top2 = st.columns([2, 1])
-                    doctor_label = top1.selectbox("Prescribing doctor *", options=list(doctor_options.keys()))
-                    num_meds = top2.number_input("Number of medicines", min_value=1, max_value=6, value=1,
-                                                 step=1)
+                with st.container(border=True, key="card_1"):
+                    ui.card_title("Prescription", "Add a row per medicine. Rows can be added and removed in the "
+                                                  "table.")
+                    p1, p2 = st.columns(2)
+                    patient_label = p1.selectbox("Patient", options=patient_labels, key="rx_patient")
+                    doctor_label = p2.selectbox("Prescribing doctor", options=list(doctor_options.keys()))
+                    patient_id = patient_options[patient_label]
 
-                    with st.form("prescription_form", border=False):
-                        h1, h2, h3 = st.columns([3, 1.4, 1.6])
-                        h1.markdown("**Medicine**")
-                        h2.markdown("**Dose**")
-                        h3.markdown("**Frequency**")
-                        items = []
-                        for i in range(int(num_meds)):
-                            c1, c2, c3 = st.columns([3, 1.4, 1.6])
-                            label = c1.selectbox(f"Medicine {i + 1}", options=list(med_options.keys()),
-                                                 index=None, placeholder="Search medicine…",
-                                                 key=f"med_select_{i}", label_visibility="collapsed")
-                            dose = c2.text_input(f"Dose {i + 1}", placeholder="e.g. 500 mg",
-                                                 key=f"dose_input_{i}", label_visibility="collapsed",
-                                                 help=f"A number and a unit: {', '.join(constants.DOSE_UNITS)}")
-                            freq = c3.selectbox(f"Frequency {i + 1}", options=constants.FREQUENCIES,
-                                                key=f"freq_select_{i}", label_visibility="collapsed")
-                            items.append({"med_id": med_options.get(label), "dose": (dose or "").strip(),
-                                          "frequency": freq})
-                        submitted = st.form_submit_button("Check & save prescription", type="primary",
-                                                          icon=":material/verified_user:")
+                    edited = st.data_editor(
+                        empty_items(), key=f"rx_items_{st.session_state['rx_editor_version']}",
+                        num_rows="dynamic", hide_index=True, width="stretch",
+                        column_config={
+                            "Medicine": st.column_config.SelectboxColumn(
+                                "Medicine", options=list(med_options.keys()), required=True, width=270),
+                            "Dose": st.column_config.TextColumn(
+                                "Dose", help=f"A number and a unit, e.g. 500 mg ({', '.join(constants.DOSE_UNITS)})",
+                                width=95),
+                            "Frequency": st.column_config.SelectboxColumn(
+                                "Frequency", options=list(constants.FREQUENCIES), required=True,
+                                default=constants.FREQUENCIES[0], width=140),
+                        })
+                    rows = [r for r in edited.to_dict("records") if r.get("Medicine") or (r.get("Dose") or "").strip()]
+                    items = [{"med_id": med_options.get(r.get("Medicine")), "dose": (r.get("Dose") or "").strip(),
+                              "frequency": r.get("Frequency")} for r in rows]
 
-            if submitted:
+                    save = st.button("Check and save prescription", type="primary", icon=":material/verified_user:",
+                                     disabled=not rows)
+
+            profile = db.patient_profile(conn, patient_id)
+            preview = sorted(db.preview_conflicts(conn, patient_id, [i["med_id"] for i in items]),
+                             key=lambda a: SEVERITY_RANK.get(a["severity"], 3))
+
+            with side_col:
+                with st.container(border=True, key="card_2"):
+                    ui.card_title("Safety preview", "Updates as you choose medicines. Nothing is saved yet.")
+                    if not any(i["med_id"] for i in items):
+                        st.markdown('<span class="ms-muted">Choose a medicine to see interactions, contraindications '
+                                    'and allergies for this patient.</span>', unsafe_allow_html=True)
+                    elif not preview:
+                        st.success("No known problems for this patient.", icon=":material/verified:")
+                    else:
+                        majors = sum(1 for a in preview if a["severity"] == "MAJOR")
+                        st.warning(f"{len(preview)} problem(s) found, {majors} major.", icon=":material/warning:")
+                        ui.alert_list(preview)
+                with st.container(border=True, key="card_3"):
+                    ui.card_title(profile["full_name"], f"Patient #{profile['patient_id']} · "
+                                                        f"{ui.age_of(profile['date_of_birth'])} years")
+                    show_context(profile)
+
+            if save:
                 errors = validation.validate_items(items)
                 if errors:
                     with form_col:
@@ -112,8 +134,9 @@ if session.can_write():
                     try:
                         prescription_id, alerts = db.create_prescription(
                             conn, patient_id=patient_id, doctor_id=doctor_options[doctor_label], items=items)
-                        st.session_state["rx_result"] = (prescription_id, patient_label.split(" · ")[0], alerts)
-                        st.rerun()  # refresh the safety context with the new medicines
+                        st.session_state["rx_result"] = (prescription_id, profile["full_name"], alerts)
+                        st.session_state["rx_editor_version"] += 1  # start the next prescription with an empty table
+                        st.rerun()
                     except pg_errors.UniqueViolation:
                         st.error("This medicine is already in the prescription")
                     except pg_errors.InsufficientPrivilege:
@@ -124,23 +147,24 @@ if session.can_write():
             result = st.session_state.pop("rx_result", None)
             if result:
                 prescription_id, patient_name, alerts = result
-                with st.container(border=True):
-                    st.markdown(f"##### Safety check result · Prescription #{prescription_id} for "
-                                f"{patient_name}")
-                    if not alerts:
-                        st.success("Saved. No safety issues found.", icon=":material/verified:")
-                    else:
-                        majors = sum(1 for a in alerts if a["severity"] == "MAJOR")
-                        st.warning(f"Saved with {len(alerts)} safety alert(s), {majors} major. Review them "
-                                   "before dispensing.", icon=":material/warning:")
-                        for alert in alerts:
-                            ui.alert_card(alert)
-                        st.page_link("pages/3_Alerts.py", label="Review or override on the Alerts page",
-                                     icon=":material/arrow_forward:")
+                with form_col:
+                    with st.container(border=True, key="card_4"):
+                        ui.card_title(f"Saved · RX-{prescription_id:05d}", f"For {patient_name}. Checked by the "
+                                                                           "database trigger.")
+                        if not alerts:
+                            st.success("No safety issues found.", icon=":material/verified:")
+                        else:
+                            majors = sum(1 for a in alerts if a["severity"] == "MAJOR")
+                            st.warning(f"{len(alerts)} alert(s) recorded, {majors} major. Review before dispensing.",
+                                       icon=":material/warning:")
+                            ui.alert_list(alerts)
+                            st.page_link("pages/3_Alerts.py", label="Review in Safety alerts",
+                                         icon=":material/arrow_forward:")
+                st.toast(f"RX-{prescription_id:05d} saved", icon=":material/check_circle:")
 
     with tabs[1]:
         show_history()
 else:
     with tabs[0]:
-        st.caption("🔒 Read-only access: pharmacists can view prescriptions but not write them.")
+        st.caption("Read-only access: pharmacists can view prescriptions but not write them.")
         show_history()

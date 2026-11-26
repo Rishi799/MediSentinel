@@ -1,4 +1,6 @@
-"""Dashboard: headline numbers, active alerts by type and severity, latest activity."""
+"""Dashboard: headline numbers, 14-day activity, alerts by type, medicines raising alerts, latest activity."""
+
+from datetime import date
 
 import altair as alt
 import pandas as pd
@@ -10,90 +12,134 @@ from medisentinel import db
 conn = session.require_login()
 role = session.get_role()
 
-ui.page_header("📊", "Dashboard", "Live overview of patients, prescriptions and medication-safety alerts.")
+ui.page_header("Dashboard", f"{date.today():%A, %d %B %Y} · Live view of prescriptions and the safety alerts "
+                            "the database raised for them.", eyebrow="Overview")
 
 counts = db.dashboard_counts(conn)
+activity = db.daily_activity(conn, days=30)
+month_rx = sum(d["prescriptions"] for d in activity)
+month_alerts = sum(d["alerts"] for d in activity)
 
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
-    ui.kpi("Patients", counts["patients"], "registered", tone="accent")
+    ui.kpi("Patients", counts["patients"], "Registered profiles", "users", "brand")
 with c2:
-    ui.kpi("Prescriptions", counts["prescriptions"], f"by {counts['doctors']} doctors")
+    ui.kpi("Prescriptions", counts["prescriptions"], f"Written by {counts['doctors']} doctors", "file")
 with c3:
-    ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major", tone="critical")
+    ui.kpi("Active alerts", counts["active_alerts"], f"{counts['major_alerts']} major · awaiting review",
+           "alert", "danger")
 with c4:
-    ui.kpi("Overridden", counts["overridden_alerts"], "with a recorded reason")
-with c5:
-    ui.kpi("Medicines", counts["medications"], "in the catalogue")
-
-if role in ("doctor", "admin"):
-    st.write("")
-    a1, a2, a3, _ = st.columns([1, 1, 1, 2])
-    a1.page_link("pages/1_Patients.py", label="Register a patient", icon=":material/person_add:")
-    a2.page_link("pages/2_Prescriptions.py", label="New prescription", icon=":material/add_circle:")
-    a3.page_link("pages/3_Alerts.py", label="Review alerts", icon=":material/notifications_active:")
+    ui.kpi("Overrides", counts["overridden_alerts"], "Each with a recorded reason", "history")
 
 st.write("")
-left, right = st.columns([1.25, 1], gap="large")
+left, right = st.columns([1.35, 1], gap="medium")
 
 with left:
-    with st.container(border=True):
-        st.markdown("##### Active alerts by type and severity")
-        breakdown = db.alert_breakdown(conn)
-        if not breakdown:
-            st.success("No active alerts.", icon=":material/check_circle:")
-        else:
-            df = pd.DataFrame(breakdown)
-            df["Type"] = df["alert_type"].map(ui.ALERT_TYPE_LABEL).fillna(df["alert_type"])
-            df["Severity"] = df["severity"].str.capitalize()
-            order = ["Major", "Moderate", "Minor"]
-            chart = (
-                alt.Chart(df)
-                .mark_bar(cornerRadiusEnd=4, stroke="#FFFFFF", strokeWidth=2, height=26)
-                .encode(
-                    y=alt.Y("Type:N", title=None, sort="-x", axis=alt.Axis(labelFontSize=12, labelLimit=180)),
-                    x=alt.X("sum(n):Q", title="Active alerts", axis=alt.Axis(tickMinStep=1, grid=True,
-                                                                            gridColor="#E2E8F0")),
-                    color=alt.Color("Severity:N", sort=order,
-                                    scale=alt.Scale(domain=order, range=[ui.SEVERITY_STYLE[s.upper()]["color"]
-                                                                         for s in order]),
-                                    legend=alt.Legend(orient="top", title=None)),
-                    order=alt.Order("severity_rank:Q"),
-                    tooltip=[alt.Tooltip("Type:N"), alt.Tooltip("Severity:N"), alt.Tooltip("n:Q", title="Alerts")],
-                )
-                .transform_calculate(severity_rank="indexof(['Major','Moderate','Minor'], datum.Severity)")
-                .properties(height=200)
-                .configure_view(stroke=None)
-            )
-            st.altair_chart(chart, width="stretch")
-            st.caption("Each alert was written by the database trigger when the medicine was prescribed.")
+    with st.container(border=True, key="card_1"):
+        ui.card_title("Activity · last 30 days", f"{month_rx} prescriptions written and {month_alerts} alerts raised.")
+        df = pd.DataFrame(activity)
+        df["day"] = pd.to_datetime(df["day"])
+        long = df.melt(id_vars="day", value_vars=["prescriptions", "alerts"], var_name="series", value_name="count")
+        long["series"] = long["series"].map({"prescriptions": "Prescriptions", "alerts": "Alerts"})
+        base = alt.Chart(long).encode(
+            x=alt.X("day:T", title=None, axis=alt.Axis(format="%d %b", labelColor="#98A2B3", grid=False, ticks=False,
+                                                      domain=False, tickCount=8, labelPadding=8)),
+            y=alt.Y("count:Q", title=None, axis=alt.Axis(gridColor="#F2F4F7", labelColor="#98A2B3", domain=False,
+                                                        ticks=False, tickMinStep=1, format="d", minExtent=34)),
+            color=alt.Color("series:N", scale=alt.Scale(domain=["Prescriptions", "Alerts"],
+                                                        range=[ui.BRAND, ui.SEVERITY_STYLE["MAJOR"]["color"]]),
+                            legend=alt.Legend(orient="top", title=None, labelColor="#475467", symbolType="circle",
+                                              symbolSize=70, symbolOpacity=1)),
+        )
+        area = base.mark_area(opacity=0.08, interpolate="monotone")
+        line = base.mark_line(strokeWidth=2.2, interpolate="monotone")
+        points = base.mark_circle(size=42).encode(
+            tooltip=[alt.Tooltip("day:T", title="Day", format="%d %b"), alt.Tooltip("series:N", title="Series"),
+                     alt.Tooltip("count:Q", title="Count")])
+        chart = (
+            (area + line + points).properties(height=235)
+            .configure_view(stroke=None)
+            .configure(font="Inter", background="#FFFFFF", padding={"left": 8, "right": 12, "top": 4, "bottom": 4},
+                       autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+        )
+        st.altair_chart(chart, width="stretch", theme=None)
 
 with right:
-    with st.container(border=True):
-        st.markdown("##### Latest active alerts")
+    with st.container(border=True, key="card_2"):
+        ui.card_title("Needs review", "Newest active alerts")
         latest = db.get_active_alerts(conn)[:4]
         if not latest:
-            st.success("Nothing needs attention.", icon=":material/check_circle:")
-        for alert in latest:
-            ui.alert_card(alert, meta=f"{alert['patient']} · {alert['created_at']:%d %b %Y, %H:%M}")
-        if latest:
-            st.page_link("pages/3_Alerts.py", label="See all alerts", icon=":material/arrow_forward:")
+            ui.empty_state("check", "All clear", "No active alerts need attention.")
+        else:
+            ui.alert_list(latest, meta=lambda a: f"{a['patient']} · {a['created_at']:%d %b, %H:%M}")
+            st.page_link("pages/3_Alerts.py", label="Open safety alerts", icon=":material/arrow_forward:")
 
-with st.container(border=True):
-    st.markdown("##### Recent prescriptions")
-    recent = db.recent_prescriptions(conn, limit=8)
+st.write("")
+left2, right2 = st.columns([1.35, 1], gap="medium")
+
+with left2:
+    with st.container(border=True, key="card_3"):
+        ui.card_title("Active alerts by type", "Stacked by severity. Every alert was written by the database "
+                                               "trigger.")
+        breakdown = db.alert_breakdown(conn)
+        if not breakdown:
+            ui.empty_state("shield", "No active alerts", "Alerts appear here as prescriptions are checked.")
+        else:
+            bdf = pd.DataFrame(breakdown)
+            bdf["Type"] = bdf["alert_type"].map(ui.ALERT_TYPE_LABEL).fillna(bdf["alert_type"])
+            bdf["Severity"] = bdf["severity"].str.capitalize()
+            order = ["Major", "Moderate", "Minor"]
+            chart = (
+                alt.Chart(bdf)
+                .transform_calculate(rank="indexof(['Major','Moderate','Minor'], datum.Severity)")
+                .mark_bar(cornerRadiusEnd=4, stroke="#FFFFFF", strokeWidth=2, height=28)
+                .encode(
+                    y=alt.Y("Type:N", title=None, sort="-x",
+                            axis=alt.Axis(labelFontSize=12, labelColor="#344054", labelLimit=180, ticks=False,
+                                          domain=False, labelPadding=8, minExtent=130)),
+                    x=alt.X("sum(n):Q", title=None,
+                            axis=alt.Axis(tickMinStep=1, gridColor="#F2F4F7", labelColor="#98A2B3", domain=False,
+                                          ticks=False)),
+                    color=alt.Color("Severity:N", sort=order,
+                                    scale=alt.Scale(domain=order,
+                                                    range=[ui.SEVERITY_STYLE[s.upper()]["color"] for s in order]),
+                                    legend=alt.Legend(orient="top", title=None, labelColor="#475467",
+                                                      symbolType="circle", symbolSize=70)),
+                    order=alt.Order("rank:Q"),
+                    tooltip=[alt.Tooltip("Type:N"), alt.Tooltip("Severity:N"), alt.Tooltip("n:Q", title="Alerts")],
+                )
+                .properties(height=190)
+                .configure_view(stroke=None)
+                .configure(font="Inter", background="#FFFFFF", padding={"left": 16, "right": 12, "top": 4, "bottom": 4},
+                           autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+            )
+            st.altair_chart(chart, width="stretch", theme=None)
+
+with right2:
+    with st.container(border=True, key="card_4"):
+        ui.card_title("Medicines raising alerts", "Active alerts per medicine")
+        top = db.top_alert_medicines(conn, limit=6)
+        if not top:
+            ui.empty_state("pill", "Nothing flagged", "No medicine has an active alert.")
+        else:
+            ui.bar_list([(t["medication"], t["alerts"], f"{t['major']} major") for t in top])
+
+with st.container(border=True, key="card_5"):
+    head, action = st.columns([4, 1])
+    with head:
+        ui.card_title("Recent prescriptions", "Latest prescriptions and how many alerts the trigger raised.")
+    if role in ("doctor", "admin"):
+        action.page_link("pages/2_Prescriptions.py", label="New prescription", icon=":material/add:")
+    recent = db.recent_prescriptions(conn, limit=7)
     if not recent:
-        st.info("No prescriptions yet.")
+        ui.empty_state("file", "No prescriptions yet", "Write the first one from the Prescriptions page.")
     else:
-        st.dataframe(
-            pd.DataFrame(recent)[["prescription_id", "prescribed_date", "patient", "doctor", "medicines",
-                                  "alerts", "status"]],
-            hide_index=True, width="stretch",
-            column_config={
-                "prescription_id": st.column_config.NumberColumn("Rx #", format="%d", width="small"),
-                "prescribed_date": st.column_config.DateColumn("Date", format="DD MMM YYYY"),
-                "patient": "Patient", "doctor": "Doctor",
-                "medicines": st.column_config.TextColumn("Medicines", width="large"),
-                "alerts": st.column_config.NumberColumn("Alerts raised", format="%d", width="small"),
-                "status": "Status",
-            })
+        for r in recent:
+            r["rx"] = f"RX-{r['prescription_id']:05d}"
+            r["date"] = f"{r['prescribed_date']:%d %b %Y}"
+            r["alert_pill"] = (ui.neutral_pill(f"{r['alerts']} alert" + ("s" if r["alerts"] != 1 else ""),
+                                               "#B42318", "#FEF3F2", "#FECDCA") if r["alerts"]
+                               else ui.neutral_pill("Clear", "#067647", "#ECFDF3", "#ABEFC6"))
+        ui.table(recent, [("rx", "Prescription", "strong"), ("date", "Date", "num"), ("patient", "Patient", ""),
+                          ("doctor", "Doctor", ""), ("medicines", "Medicines", ""),
+                          ("alert_pill", "Safety", "html")])

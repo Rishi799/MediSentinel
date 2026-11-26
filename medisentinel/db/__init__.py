@@ -225,3 +225,58 @@ def list_signals(conn, limit=20):
         "SELECT m.name AS medication, s.reaction_term, s.report_count, s.prr, s.ror "
         "FROM Adverse_Signal s JOIN Medication m ON m.med_id = s.med_id "
         "ORDER BY s.prr DESC NULLS LAST LIMIT %s", (limit,)).fetchall()
+
+
+def preview_conflicts(conn, patient_id, med_ids):
+    """What the safety trigger would raise if these medicines were prescribed now. Read-only: nothing is saved.
+
+    Mirrors fn_check_medication_safety, so the doctor sees the problems before saving; the trigger
+    still makes the final check when the prescription is written.
+    """
+    med_ids = [m for m in dict.fromkeys(med_ids) if m is not None]
+    if not med_ids:
+        return []
+    active = [r["med_id"] for r in conn.execute(
+        "SELECT DISTINCT pi.med_id FROM Prescription_Item pi "
+        "JOIN Prescription p ON p.prescription_id = pi.prescription_id "
+        "WHERE p.patient_id = %s AND p.status = 'ACTIVE'", (patient_id,)).fetchall()]
+    pool = list(dict.fromkeys(med_ids + active))
+    return conn.execute(
+        "SELECT 'INTERACTION' AS alert_type, i.severity, m1.name || ' + ' || m2.name AS medication, "
+        "       coalesce(i.mechanism, 'Known drug interaction') AS message "
+        "FROM Interaction i JOIN Medication m1 ON m1.med_id = i.med_id_1 JOIN Medication m2 ON m2.med_id = i.med_id_2 "
+        "WHERE (i.med_id_1 = ANY(%(new)s) AND i.med_id_2 = ANY(%(pool)s)) "
+        "   OR (i.med_id_2 = ANY(%(new)s) AND i.med_id_1 = ANY(%(pool)s)) "
+        "UNION ALL "
+        "SELECT 'CONTRA', c.severity, m.name, 'Contraindicated for condition: ' || c.condition_name "
+        "FROM Contraindication c JOIN Patient_Condition pc ON pc.condition_name = c.condition_name "
+        "JOIN Medication m ON m.med_id = c.med_id "
+        "WHERE pc.patient_id = %(patient)s AND c.med_id = ANY(%(new)s) "
+        "UNION ALL "
+        "SELECT 'ALLERGY', 'MAJOR', m.name, 'Patient allergy: ' || coalesce(a.reaction, 'recorded') "
+        "FROM Allergy a JOIN Medication m ON m.med_id = a.med_id "
+        "WHERE a.patient_id = %(patient)s AND a.med_id = ANY(%(new)s) "
+        "ORDER BY 2, 1",
+        {"new": med_ids, "pool": pool, "patient": patient_id}).fetchall()
+
+
+def daily_activity(conn, days=14):
+    """Prescriptions written and alerts raised per day for the last `days` days (zero-filled)."""
+    return conn.execute(
+        "WITH d AS (SELECT generate_series(CURRENT_DATE - (%(days)s - 1) * INTERVAL '1 day', CURRENT_DATE, "
+        "                                  INTERVAL '1 day')::date AS day) "
+        "SELECT d.day, "
+        "       (SELECT count(*) FROM Prescription p WHERE p.prescribed_date = d.day) AS prescriptions, "
+        "       (SELECT count(*) FROM Alert_Log a WHERE a.created_at::date = d.day) AS alerts "
+        "FROM d ORDER BY d.day", {"days": days}).fetchall()
+
+
+def top_alert_medicines(conn, limit=6):
+    """Medicines with the most active alerts, with how many of those are major."""
+    return conn.execute(
+        "SELECT m.name AS medication, count(*) AS alerts, "
+        "       count(*) FILTER (WHERE a.severity = 'MAJOR') AS major "
+        "FROM Alert_Log a JOIN Prescription_Item pi ON pi.item_id = a.item_id "
+        "JOIN Medication m ON m.med_id = pi.med_id "
+        "WHERE NOT a.overridden GROUP BY m.name ORDER BY alerts DESC, major DESC, m.name LIMIT %s",
+        (limit,)).fetchall()

@@ -11,8 +11,8 @@ from medisentinel import db
 
 conn = session.require_login()
 
-ui.page_header("🌐", "Drug safety data", "openFDA drug labels and adverse-event reports (MongoDB) behind "
-                                        "the safety rules.")
+ui.page_header("Drug safety data", "openFDA drug labels and adverse-event reports stored in MongoDB: the "
+                                   "evidence behind the safety rules.", eyebrow="Surveillance")
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -32,21 +32,27 @@ def drug_reactions(drug):
 
 
 def bar_chart(rows, label, height=300):
-    """Single-series horizontal bar chart of report counts (one hue, sorted, with tooltips)."""
+    """Single-series horizontal bars of report counts (one hue, sorted, with tooltips)."""
     df = pd.DataFrame(rows).rename(columns={"_id": label, "report_count": "Reports"})
     df[label] = df[label].astype(str).str.title()
     chart = (
         alt.Chart(df)
-        .mark_bar(color=ui.CHART_BLUE, cornerRadiusEnd=4, height=18)
+        .mark_bar(color=ui.BRAND, cornerRadiusEnd=4, height=16)
         .encode(
-            y=alt.Y(f"{label}:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200, labelFontSize=12)),
-            x=alt.X("Reports:Q", title="Reports", axis=alt.Axis(grid=True, gridColor="#E2E8F0", tickMinStep=1)),
+            y=alt.Y(f"{label}:N", sort="-x", title=None,
+                    axis=alt.Axis(labelLimit=200, labelFontSize=12, labelColor="#344054", ticks=False, domain=False,
+                                  labelPadding=8, minExtent=170)),
+            x=alt.X("Reports:Q", title=None,
+                    axis=alt.Axis(gridColor="#F2F4F7", labelColor="#98A2B3", domain=False, ticks=False,
+                                  tickMinStep=1)),
             tooltip=[alt.Tooltip(f"{label}:N"), alt.Tooltip("Reports:Q", format=",")],
         )
         .properties(height=height)
         .configure_view(stroke=None)
+        .configure(font="Inter", background="#FFFFFF", padding={"left": 16, "right": 12, "top": 4, "bottom": 4},
+                   autosize=alt.AutoSizeParams(type="fit", contains="padding"))
     )
-    st.altair_chart(chart, width="stretch")
+    st.altair_chart(chart, width="stretch", theme=None)
 
 
 def short(text, limit=700):
@@ -64,33 +70,31 @@ except PyMongoError:
 signals = db.list_signals(conn, limit=20)
 k1, k2, k3 = st.columns(3)
 with k1:
-    ui.kpi("Drug labels", counts["labels"], "openFDA · MongoDB", tone="accent")
+    ui.kpi("Drug labels", counts["labels"], "openFDA SPL · MongoDB", "database", "brand")
 with k2:
-    ui.kpi("Adverse-event reports", counts["reports"], "openFDA FAERS · MongoDB")
+    ui.kpi("Adverse-event reports", counts["reports"], "openFDA FAERS · MongoDB", "activity")
 with k3:
-    ui.kpi("Safety signals", len(signals), "PRR / ROR · PostgreSQL")
+    ui.kpi("Safety signals", len(signals), "PRR / ROR · PostgreSQL", "alert")
 
 st.write("")
-c1, c2 = st.columns(2, gap="large")
+c1, c2 = st.columns(2, gap="medium")
 with c1:
-    with st.container(border=True):
-        st.markdown("##### Most reported adverse reactions")
+    with st.container(border=True, key="card_1"):
+        ui.card_title("Most reported reactions", "MongoDB aggregation: $unwind → $group → $sort → $limit")
         if reactions:
             bar_chart(reactions, "Reaction")
-            st.caption("MongoDB aggregation: $unwind reactions → $group → $sort → $limit.")
         else:
             st.info("No reports loaded. Run ingestion/load_openfda.py.")
 with c2:
-    with st.container(border=True):
-        st.markdown("##### Most reported drugs")
+    with st.container(border=True, key="card_2"):
+        ui.card_title("Most reported drugs", "Every drug named in a report, suspect or concomitant")
         if drugs:
             bar_chart(drugs, "Drug")
-            st.caption("Counts every drug named in a report, suspect or concomitant.")
         else:
             st.info("No reports loaded. Run ingestion/load_openfda.py.")
 
-with st.container(border=True):
-    st.markdown("##### Drug label lookup")
+with st.container(border=True, key="card_3"):
+    ui.card_title("Drug label lookup", "Search the FDA label text that Phase 2 turns into interaction rules.")
     query = st.text_input("Search a drug", placeholder="e.g. warfarin, ibuprofen, metformin",
                           icon=":material/search:", label_visibility="collapsed")
     if query.strip():
@@ -108,30 +112,27 @@ with st.container(border=True):
                     st.caption(drug_class)
                 if label.get("boxed_warning"):
                     st.error(short(label["boxed_warning"][0], 500), icon=":material/warning:")
-                st.markdown("**Drug interactions (label text)**")
+                ui.label("Drug interactions")
                 st.write(short(label.get("drug_interactions", ["Not stated."])[0]))
                 if label.get("contraindications"):
-                    st.markdown("**Contraindications**")
+                    ui.label("Contraindications")
                     st.write(short(label["contraindications"][0], 500))
                 reported = drug_reactions(fda.get("generic_name", [brand])[0])
                 if reported:
-                    st.markdown("**Reactions reported for this drug**")
+                    ui.label("Reactions reported for this drug")
                     bar_chart(reported, "Reaction", height=200)
-        st.caption("Phase 2 turns this label text into Interaction and Contraindication rows with NLP.")
 
-with st.container(border=True):
-    st.markdown("##### Adverse-reaction signals")
+with st.container(border=True, key="card_4"):
+    ui.card_title("Adverse-reaction signals", "A PRR above 2 with at least 3 reports is the usual threshold for "
+                                              "a signal.")
     if not signals:
         st.info("No signals computed yet.")
     else:
-        st.dataframe(
-            pd.DataFrame(signals), hide_index=True, width="stretch",
-            column_config={
-                "medication": "Medicine", "reaction_term": "Reaction",
-                "report_count": st.column_config.NumberColumn("Reports", format="%d"),
-                "prr": st.column_config.NumberColumn("PRR", format="%.2f",
-                                                     help="Proportional Reporting Ratio: above 2 suggests a signal"),
-                "ror": st.column_config.NumberColumn("ROR", format="%.2f", help="Reporting Odds Ratio"),
-            })
-        st.caption("PRR above 2 with at least 3 reports is the usual threshold for a signal. Phase 2 computes "
-                   "these from the MongoDB reports.")
+        rows = [{"medication": s["medication"], "reaction": s["reaction_term"].capitalize(),
+                 "reports": f"{s['report_count']:,}", "prr": f"{s['prr']:.2f}", "ror": f"{s['ror']:.2f}",
+                 "flag": ui.neutral_pill("Signal", "#B42318", "#FEF3F2", "#FECDCA")
+                 if s["prr"] and s["prr"] >= 2 and (s["report_count"] or 0) >= 3
+                 else ui.neutral_pill("Below threshold")} for s in signals]
+        ui.table(rows, [("medication", "Medicine", "strong"), ("reaction", "Reaction", ""),
+                        ("reports", "Reports", "num"), ("prr", "PRR", "num"), ("ror", "ROR", "num"),
+                        ("flag", "Status", "html")])

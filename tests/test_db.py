@@ -148,3 +148,20 @@ def test_override_appears_in_audit_trail(doctor, med, new_patient):
     db.override_alert(doctor, alerts[0]["alert_id"], "Short course, monitored")
     trail = {a["alert_id"]: a["override_reason"] for a in db.get_overridden_alerts(doctor)}
     assert trail[alerts[0]["alert_id"]] == "Short course, monitored"
+
+
+def test_preview_matches_what_the_trigger_raises(doctor, med, new_patient):
+    meds = [med("Warfarin"), med("Aspirin")]
+    preview = db.preview_conflicts(doctor, new_patient, meds)
+    assert {(p["alert_type"], p["severity"]) for p in preview} == {("INTERACTION", "MAJOR"), ("CONTRA", "MAJOR")}
+    _, alerts = db.create_prescription(doctor, new_patient, first_doctor(doctor),
+                                       [{"med_id": m, "dose": "5 mg", "frequency": "once daily"} for m in meds])
+    assert len(alerts) == len(preview)  # nothing was saved by the preview; the trigger raised the same alerts
+    assert db.preview_conflicts(doctor, new_patient, []) == []
+
+
+def test_activity_summaries(pharmacist):
+    days = db.daily_activity(pharmacist, days=7)
+    assert len(days) == 7 and days[-1]["day"] == datetime.date.today()
+    top = db.top_alert_medicines(pharmacist, limit=3)
+    assert len(top) <= 3 and all(t["major"] <= t["alerts"] for t in top)
