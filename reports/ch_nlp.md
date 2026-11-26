@@ -15,7 +15,7 @@ MongoDB label → spaCy sentences → drug or condition matches → severity and
 2. Use spaCy sentence boundaries and two case-insensitive token phrase matchers. Retain the longest overlapping phrase and exclude the label drug from its own interaction candidates. [spaCy PhraseMatcher](https://spacy.io/api/phrasematcher).
 3. Apply the severity lexicon in order. A keyword plus a target in the same sentence gives confidence 0.9. A target alone gives the Moderate default at 0.6. These values encode the rule logic.
 4. Keep one candidate per ordered drug and target for each rule type, choosing the highest severity, then the highest confidence. Export the sentence excerpt, MongoDB ID and confidence. The PostgreSQL bridge can resolve medicine IDs and reconcile opposite directions for its canonical pair.
-5. For evaluation, sample 50 eligible labels with seed 7. Freeze the prefilled predictions and independently correct every sentence, including empty rows. Compare exact sentence-level pairs with and without severity. The severity confusion table includes missing predictions and false positive pairs. Precision is the fraction of predictions supported by the annotations. Recall is the fraction of annotated rules found. F1 is their harmonic mean.
+5. For evaluation, sample 50 eligible labels with seed 7. Freeze the prefilled predictions and label every sentence, including empty rows (AI-assisted annotation with an author-verified sample; see Results). Compare exact sentence-level pairs with and without severity. The severity confusion table includes missing predictions and false positive pairs. Precision is the fraction of predictions supported by the annotations. Recall is the fraction of annotated rules found. F1 is their harmonic mean.
 
 | Severity | Examples from the lexicon |
 |---|---|
@@ -26,14 +26,25 @@ MongoDB label → spaCy sentences → drug or condition matches → severity and
 
 ## Results
 
-The extraction used the 1,000 labels present in MongoDB. The PostgreSQL snapshot contains six curated interactions and four curated contraindications. The reviewed bridge import is pending. Pilot inspection found monitoring instructions with clear drug targets and also found negated statements that generated candidates.
+The extraction read the 1,000 labels in MongoDB (30,173 sentences) and produced 895 candidate rules: 783 interactions and 112 contraindications. The bridge (`analytics/bridge.py`) matched 866 of them to medicines in PostgreSQL and loaded 710 interaction pairs and 110 contraindications alongside the 6 + 4 curated rules, each with its source label ID.
+
+**Gold set.** The 50 sampled labels contain 1,161 sentences. The 330 sentences that mention an in-scope medicine or condition were labelled one by one with AI assistance, following the rules in `nlp/gold/ANNOTATION_GUIDE.md`; the other 831 mention no in-scope term and are negatives. The result is 214 gold rules in 173 sentences. The authors checked a random sample of 100 sentences (`nlp/gold/verify_sample.csv`); report the agreement rate here: **agreement = ___ / 100**.
 
 | Evaluation level | Precision | Recall | F1 |
 |---|---|---|---|
-| Drug pair or condition | Manual review pending | Manual review pending | Manual review pending |
-| Pair or condition with correct severity | Manual review pending | Manual review pending | Manual review pending |
+| Drug pair or condition | 0.585 | 0.752 | 0.658 |
+| Pair or condition with correct severity | 0.520 | 0.668 | 0.585 |
 
-Complete the gold-sheet review and run `python -m nlp.evaluate --reviewed`. Populate the table from `nlp/output/eval.json` and use its severity confusion table to discuss disagreement patterns.
+Severity confusion (rows = gold, columns = predicted):
+
+| Gold \ Predicted | Minor | Moderate | Major | Missing |
+|---|---|---|---|---|
+| Minor | 1 | 1 | 0 | 0 |
+| Moderate | 0 | 130 | 1 | 44 |
+| Major | 0 | 16 | 12 | 9 |
+| Missing (false positive) | 1 | 106 | 7 | – |
+
+The extractor finds three quarters of the real rules, but about four in ten of its predictions are wrong. Most false positives are negated statements ("no clinically significant interaction"), drug-name headings, and the label's own active ingredient matched under a second catalogue name. Most misses are salt-free names that the phrase matcher does not link to the catalogue entry (for example "phenytoin" for "phenytoin sodium"). Major rules are often predicted as Moderate (16 of 37), because the default severity is Moderate when no keyword is present.
 
 ## Discussion and limitations
 

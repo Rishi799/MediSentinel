@@ -71,6 +71,8 @@ def read_gold(path, expected_sentences):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reviewed", action="store_true", help="Confirm manual review of all 50 labels")
+    parser.add_argument("--annotation", default="manual review by the authors",
+                        help="How the gold sheet was produced; saved with the results")
     args = parser.parse_args()
     if not args.reviewed:
         parser.error("Finish reviewing the gold sheet, then rerun with --reviewed.")
@@ -81,6 +83,7 @@ def main():
         parser.error(str(exc))
     predicted = {tuple(row) for row in snapshot["predictions"]}
     results = evaluate(predicted, gold)
+    results["annotation"] = args.annotation
     results["labels"] = len(snapshot["labels"])
     results["sentences"] = len(snapshot["sentences"])
     for name in ("pair_or_condition", "with_severity"):

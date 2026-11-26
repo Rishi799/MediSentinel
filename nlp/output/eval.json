@@ -1,0 +1,47 @@
+{
+  "pair_or_condition": {
+    "precision": 0.5854545454545454,
+    "recall": 0.7523364485981309,
+    "f1": 0.6584867075664622,
+    "tp": 161,
+    "fp": 114,
+    "fn": 53
+  },
+  "with_severity": {
+    "precision": 0.52,
+    "recall": 0.6682242990654206,
+    "f1": 0.5848670756646217,
+    "tp": 143,
+    "fp": 132,
+    "fn": 71
+  },
+  "severity_confusion": {
+    "MINOR": {
+      "MINOR": 1,
+      "MODERATE": 1,
+      "MAJOR": 0,
+      "MISSING": 0
+    },
+    "MODERATE": {
+      "MINOR": 0,
+      "MODERATE": 130,
+      "MAJOR": 1,
+      "MISSING": 44
+    },
+    "MAJOR": {
+      "MINOR": 0,
+      "MODERATE": 16,
+      "MAJOR": 12,
+      "MISSING": 9
+    },
+    "MISSING": {
+      "MINOR": 1,
+      "MODERATE": 106,
+      "MAJOR": 7,
+      "MISSING": 0
+    }
+  },
+  "annotation": "AI-assisted annotation of all 1,161 sentences (see nlp/gold/ANNOTATION_GUIDE.md); author verification sample: nlp/gold/verify_sample.csv",
+  "labels": 50,
+  "sentences": 1161
+}
