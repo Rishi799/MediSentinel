@@ -148,7 +148,6 @@ if session.can_write():
             result = st.session_state.pop("rx_result", None)
             if result:
                 prescription_id, patient_name, alerts = result
-<<<<<<< HEAD
                 with form_col:
                     with st.container(border=True, key="card_4"):
                         ui.card_title(f"Saved · RX-{prescription_id:05d}", f"For {patient_name}. Checked by the "
@@ -159,42 +158,28 @@ if session.can_write():
                             majors = sum(1 for a in alerts if a["severity"] == "MAJOR")
                             st.warning(f"{len(alerts)} alert(s) recorded, {majors} major. Review before dispensing.",
                                        icon=":material/warning:")
-                            ui.alert_list(alerts)
+                            inputs = {row["alert_id"]: row for row in alert_inputs(
+                                conn, [alert["alert_id"] for alert in alerts])}
+                            for alert in alerts:
+                                row = inputs.get(alert["alert_id"])
+                                score = row["risk_score"] if row else None
+                                live = False
+                                if score is None and row:
+                                    try:
+                                        score = round(predict_risk(row["features"]), 3)
+                                        live = True
+                                    except (FileNotFoundError, ValueError):
+                                        pass
+                                card, meter = st.columns([2.2, 1], vertical_alignment="center")
+                                with card:
+                                    ui.alert_list([alert])
+                                with meter:
+                                    ui.risk_meter(score)
+                                    if live:
+                                        st.caption("Live model estimate")
                             st.page_link("pages/3_Alerts.py", label="Review in Safety alerts",
                                          icon=":material/arrow_forward:")
                 st.toast(f"RX-{prescription_id:05d} saved", icon=":material/check_circle:")
-=======
-                with st.container(border=True, key="card_1"):
-                    st.markdown(f"##### Safety check result · Prescription #{prescription_id} for "
-                                f"{patient_name}")
-                    if not alerts:
-                        st.success("Saved. No safety issues found.", icon=":material/verified:")
-                    else:
-                        majors = sum(1 for a in alerts if a["severity"] == "MAJOR")
-                        st.warning(f"Saved with {len(alerts)} safety alert(s), {majors} major. Review them "
-                                   "before dispensing.", icon=":material/warning:")
-                        inputs = {row["alert_id"]: row for row in alert_inputs(
-                            conn, [alert["alert_id"] for alert in alerts])}
-                        for alert in alerts:
-                            row = inputs.get(alert["alert_id"])
-                            score = row["risk_score"] if row else None
-                            live = False
-                            if score is None and row:
-                                try:
-                                    score = round(predict_risk(row["features"]), 3)
-                                    live = True
-                                except (FileNotFoundError, ValueError):
-                                    pass
-                            card, meter = st.columns([2, 1], vertical_alignment="center")
-                            with card:
-                                ui.alert_card(alert)
-                            with meter:
-                                ui.risk_meter(score)
-                                if live:
-                                    st.caption("Live estimate")
-                        st.page_link("pages/3_Alerts.py", label="Review or override on the Alerts page",
-                                     icon=":material/arrow_forward:")
->>>>>>> origin/main
 
     with tabs[1]:
         show_history()

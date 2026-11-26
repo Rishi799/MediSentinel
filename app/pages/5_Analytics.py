@@ -7,7 +7,8 @@ from app import analytics_queries as queries
 from app import session, ui
 
 conn = session.require_login()
-ui.page_header("", "Analytics", "Track FDA-derived rules, model scores, adverse-event signals and overrides.")
+ui.page_header("Analytics", "Track FDA-derived rules, model scores, adverse-event signals and overrides.",
+               eyebrow="Surveillance")
 
 rule_rows = queries.rule_totals(conn)
 totals = queries.alert_totals(conn)
